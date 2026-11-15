@@ -94,14 +94,14 @@ function pgCom(){
   }else if(u.tab==='forms'){
     body=comForms();
   }else{
-    body=`<div class="card"><div class="ct" style="margin-bottom:4px">Automatizações</div><p class="hint" style="margin-bottom:8px">Mensagens que o sistema prepara sozinho. Nesta prévia elas ficam só configuradas: nada é enviado.</p><div class="rows">${DB.auto.map(a=>`<div class="rw"><button type="button" class="switch ${a.on?'on':''}" role="switch" aria-checked="${!!a.on}" aria-label="${esc(a.nome)}" data-act="toggleAuto" data-id="${a.id}"><i></i></button><span class="grow"><b>${esc(a.nome)}</b><small style="display:block">${esc(a.quando)} · modelo “${esc(a.modelo)}”</small></span>${badge(a.on?'Ativa':'Pausada',a.on?'green':'gray')}</div>`).join('')}</div></div>`;
+    body=`<div class="card"><div class="ct" style="margin-bottom:4px">Automatizações</div><p class="hint" style="margin-bottom:8px">Mensagens que o sistema prepara sozinho. ${PREV?'Nesta prévia elas ficam só configuradas: nada é enviado.':'Elas começam a funcionar quando o WhatsApp Business for conectado. Por enquanto, nada é enviado sozinho.'}</p><div class="rows">${DB.auto.map(a=>`<div class="rw"><button type="button" class="switch ${a.on?'on':''}" role="switch" aria-checked="${!!a.on}" aria-label="${esc(a.nome)}" data-act="toggleAuto" data-id="${a.id}"><i></i></button><span class="grow"><b>${esc(a.nome)}</b><small style="display:block">${esc(a.quando)} · modelo “${esc(a.modelo)}”</small></span>${badge(a.on?'Ativa':'Pausada',a.on?'green':'gray')}</div>`).join('')}</div></div>`;
   }
   return head('Comunicação','Envie mensagens para contatos, grupos ou segmentos',btn('Novo disparo','plus','btn-blue','data-act="novoDisparo"'))+
     tabsU('com.tab',u.tab,[['disparos','Disparos'],['mensagens','Mensagens'],['segmentos','Listas / Segmentos'],['modelos','Modelos'],['auto','Automatizações'],['forms','Formulários']]).replace('class="utabs"','class="utabs" style="margin-top:0"')+body;
 }
 A.novoDisparo=el=>{
   const segs=allSegs(),t0=el.dataset.tpl?DB.tpl.find(t=>t.id===+el.dataset.tpl):null;
-  formModal({title:'Novo disparo',wide:true,submit:'Salvar disparo',intro:'Nesta prévia o disparo fica salvo na lista, mas nenhuma mensagem é enviada.',fields:[
+  formModal({title:'Novo disparo',wide:true,submit:'Salvar disparo',intro:PREV?'Nesta prévia o disparo fica salvo na lista, mas nenhuma mensagem é enviada.':'O disparo fica salvo na lista. O envio automático começa quando o WhatsApp Business for conectado.',fields:[
     {k:'nome',label:'Nome do disparo',req:true,ph:'Ex.: Convite Chanucá',half:true},{k:'canal',label:'Canal',type:'select',opts:['WhatsApp','E-mail'],val:t0?t0.canal:'WhatsApp',half:true},
     {k:'publico',label:'Público',type:'select',opts:segs.map(s=>[s.nome,s.nome+' — '+NUM(segCount(s))+' contatos']),val:el.dataset.arg||'Comunidade',half:true},
     {k:'tpl',label:'Modelo',type:'select',ph:'Escrever do zero',opts:DB.tpl.map(t=>[t.id,t.nome]),val:t0?t0.id:'',on:'dispTpl',half:true},
@@ -111,7 +111,7 @@ A.novoDisparo=el=>{
     onSubmit(v){const s=segs.find(x=>x.nome===v.publico),ag=v.quando==='agendar';
       if(ag&&(!v.data||v.data<TODAY))return 'Escolha uma data de hoje em diante.';
       DB.disp.push({id:nid(),nome:v.nome,data:ag?v.data:TODAY,publico:v.publico,canal:v.canal,env:s?segCount(s):0,ent:0,resp:0,st:ag?'Agendado':'Rascunho',txt:v.txt});
-      S.ui.com.tab='disparos';toast(ag?'Disparo agendado para '+fmtDate(v.data)+'. Na prévia nada é enviado.':'Disparo salvo como rascunho. Na prévia nada é enviado.',1)}});
+      S.ui.com.tab='disparos';toast(ag?'Disparo agendado para '+fmtDate(v.data)+'. '+(PREV?'Na prévia nada é enviado.':'O envio automático começa quando o WhatsApp Business for conectado.'):'Disparo salvo como rascunho. '+(PREV?'Na prévia nada é enviado.':'O envio automático começa quando o WhatsApp Business for conectado.'),1)}});
 };
 A.dispTpl=el=>{const t=DB.tpl.find(x=>x.id===+el.value),ta=$('#ff-txt');if(ta)ta.value=t?t.txt:''};
 A.waPick=()=>formModal({title:'Enviar WhatsApp',submit:'Continuar',fields:[{k:'fid',label:'Para qual família?',type:'family',req:true}],onSubmit(v){setTimeout(()=>openWa(v.fid),0)}});
@@ -121,7 +121,7 @@ A.novoSeg=()=>formModal({title:'Novo segmento',submit:'Criar segmento',fields:[
   {k:'mens',label:'Mensalidade',type:'select',ph:'Qualquer situação',opts:[['ok','Em dia'],['late','Atrasada'],['none','Não possui']],half:true}],
   onSubmit(v){if(allSegs().some(s=>norm(s.nome)===norm(v.nome)))return 'Já existe um segmento com este nome.';
     const crit=[v.cat&&'Categoria '+v.cat,v.part&&(PART.find(p=>p[0]===v.part)||[])[1],v.mens&&'Mensalidade '+({ok:'em dia',late:'atrasada',none:'não possui'})[v.mens]].filter(Boolean).join(' · ')||'Todas as famílias ativas';
-    DB.seg.push({nome:v.nome,crit,fn:f=>f.status==='Ativo'&&(!v.cat||f.cat===v.cat)&&(!v.part||f.part[v.part])&&(!v.mens||mensStatus(f)===v.mens)});S.ui.com.tab='segmentos';toast('Segmento criado.')}});
+    DB.seg.push({id:nid(),nome:v.nome,crit,cat:v.cat,part:v.part,mens:v.mens,fn:f=>f.status==='Ativo'&&(!v.cat||f.cat===v.cat)&&(!v.part||f.part[v.part])&&(!v.mens||mensStatus(f)===v.mens)});S.ui.com.tab='segmentos';toast('Segmento criado.')}});
 function tplForm(t){formModal({title:t?'Editar modelo':'Novo modelo',wide:true,submit:t?'Salvar':'Criar modelo',fields:[
   {k:'nome',label:'Nome do modelo',req:true,val:t&&t.nome,half:true},{k:'canal',label:'Canal',type:'select',opts:['WhatsApp','E-mail'],val:t?t.canal:'WhatsApp',half:true},
   {k:'txt',label:'Texto',type:'textarea',rows:6,req:true,val:t&&t.txt,hint:'Campos automáticos: {nome}, {evento}, {data}, {valor}, {competencia}, {falecido}, {data_hebraica}.'}],

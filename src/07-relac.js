@@ -29,7 +29,7 @@ const lastCt=fid=>{let m='';ixOf(IX.ct,fid).forEach(c=>{if(c.feito&&c.tipo!=='pr
 function score(f){
   let s=0;const dp=f.pres?diffDays(TODAY,f.pres.data):999;
   s+=dp<=7?40:dp<=14?32:dp<=30?22:dp<=60?10:0;
-  s+=Math.min(20,(f.ev12||0)*3+ixOf(IX.reg,f.id).filter(e=>!e.cancel&&e.data>=TODAY).length*4);
+  s+=Math.min(20,(f._ev12??f.ev12??0)*3+ixOf(IX.reg,f.id).filter(e=>!e.cancel&&e.data>=TODAY).length*4);
   const ms=mensStatus(f);s+=ms==='ok'?15:ms==='late'?5:0;
   if(ixOf(IX.don,f.id).some(d=>d.data>=addDays(TODAY,-365)))s+=10;
   const lc=lastCt(f.id),dc=lc?diffDays(TODAY,lc):999;s+=dc<=30?15:dc<=90?8:0;
@@ -193,7 +193,7 @@ A.rmTag=el=>{const f=FAM.get(+el.dataset.id);arrDel(f.tags,el.dataset.arg);f._s=
 const tagChips=f=>`<div class="chips">${(f.tags||[]).map(t=>`<button type="button" class="badge b-gray tagx" title="Remover etiqueta" data-act="rmTag" data-id="${f.id}" data-arg="${esc(t)}">${ic('tag',11)}${esc(t)} ×</button>`).join('')}<button type="button" class="badge b-gray tagx" data-act="addTag" data-id="${f.id}">+ etiqueta</button></div>`;
 const rabCard=f=>can('notas')
   ?`<div class="card mt"><div class="ct" style="margin-bottom:10px">${ic('lock',16)}Anotações privadas do rabino</div><textarea class="inp" id="obs-rab" rows="5" placeholder="Só o rabino vê estas anotações...">${esc(f.notaRabino||'')}</textarea><div class="pacts" style="margin-top:10px">${btn('Salvar anotação','check','btn-green',`data-act="saveRab" data-id="${f.id}"`)}</div></div>`
-  :`<div class="card mt"><div class="ct" style="margin-bottom:6px">${ic('lock',16)}Anotações privadas do rabino</div><p class="hint">Só o rabino vê estas anotações. Para testar, clique no seu nome, no alto da tela, e entre como Rabino.</p></div>`;
+  :`<div class="card mt"><div class="ct" style="margin-bottom:6px">${ic('lock',16)}Anotações privadas do rabino</div><p class="hint">Só o rabino vê estas anotações.${PREV?' Para testar, clique no seu nome, no alto da tela, e entre como Rabino.':''}</p></div>`;
 A.saveRab=el=>{FAM.get(+el.dataset.id).notaRabino=$('#obs-rab').value.trim();toast('Anotação do rabino salva.');render()};
 
 /* ================= dados de exemplo dos novos módulos ================= */

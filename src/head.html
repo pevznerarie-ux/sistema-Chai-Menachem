@@ -440,6 +440,21 @@ button.me{border:0;font:inherit;text-align:left;cursor:pointer}
 .app.topnav .side{column-gap:12px}
 .app.topnav .brand{margin-right:8px}
 
+.auth{min-height:100%;display:flex;align-items:center;justify-content:center;padding:24px 16px;background:var(--bg)}
+.auth-card{width:100%;max-width:400px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:28px;display:flex;flex-direction:column}
+.auth-brand{display:flex;align-items:center;gap:10px;color:var(--brand-ic);margin-bottom:22px}
+.auth-brand b{color:var(--ink);font-size:17px}
+.auth h1{font-size:20px;font-weight:700;margin-bottom:4px}
+.auth .sub{color:var(--ink-2);margin-bottom:18px}
+.auth .field{margin-bottom:12px}
+.auth .btn{width:100%;height:38px;margin-top:6px}
+.auth .err{min-height:0;margin:2px 0}
+.sync{font-size:11.5px;color:var(--ink-3);white-space:nowrap;display:inline-flex;align-items:center;gap:5px;flex:none}
+.sync svg{color:var(--green)}
+.sync.err,.sync.err svg{color:var(--red-ink)}
+.tb-sync{margin-left:auto}
+.tb-sync .sync{color:inherit;opacity:.8}
+
 /* ---------- responsive ---------- */
 @media (max-width:1180px){
   .split,.split-w,.split-l{grid-template-columns:minmax(0,1fr)}
@@ -493,6 +508,7 @@ button.me{border:0;font:inherit;text-align:left;cursor:pointer}
     <nav class="bnav" id="bnav" aria-label="Atalhos"></nav>
   </div>
 </div>
+<div id="auth" style="display:none;height:100%"></div>
 <div id="modal-root"></div>
 <div id="toasts" aria-live="polite"></div>
 <div class="tip" id="tip"></div>

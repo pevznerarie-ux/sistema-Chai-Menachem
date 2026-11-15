@@ -36,19 +36,24 @@ function pgCobranca(){
       <td class="num">${x.n}</td><td class="num"><b style="color:var(--red-ink)">${BRL(x.v)}</b></td><td class="num">${fmtDate(x.ps[0].venc)} <small>(${ago(x.ps[0].venc)})</small></td>
       <td class="acts"><button type="button" class="ibtn" title="Enviar lembrete" aria-label="Enviar lembrete" data-act="waLate" data-id="${x.f.id}">${ic('wa',15)}</button><button type="button" class="ibtn" title="Link de pagamento" aria-label="Link de pagamento" data-act="payLink" data-id="${x.f.id}" data-arg="pay:${x.ps[0].id}">${ic('link',15)}</button><button type="button" class="ibtn" title="Abrir financeiro" aria-label="Abrir financeiro" data-go="financeiro-${x.f.id}">${ic('eye',15)}</button></td></tr>`).join('')}</tbody></table></div>`:empty('Nenhuma mensalidade em atraso.','Todas as famílias estão em dia.')}
   </div><aside class="rail">
-    <div class="card"><div class="cap">Régua de cobrança</div><p class="hint" style="margin-bottom:6px">O sistema lembra a família sozinho, nestes momentos.</p><div class="rows">${DB.cfg.regua.map((g,i)=>`<div class="rw"><button type="button" class="switch ${g.on?'on':''}" role="switch" aria-checked="${!!g.on}" aria-label="${esc(g.txt)}" data-act="toggleRegua" data-id="${i}"><i></i></button><span class="grow"><b>${g.d} dias depois do vencimento</b><small style="display:block">${esc(g.txt)}</small></span></div>`).join('')}</div></div>
+    <div class="card"><div class="cap">Régua de cobrança</div><p class="hint" style="margin-bottom:6px">${PREV?'O sistema lembra a família sozinho, nestes momentos.':'Os lembretes automáticos começam quando o WhatsApp Business for conectado.'}</p><div class="rows">${DB.cfg.regua.map((g,i)=>`<div class="rw"><button type="button" class="switch ${g.on?'on':''}" role="switch" aria-checked="${!!g.on}" aria-label="${esc(g.txt)}" data-act="toggleRegua" data-id="${i}"><i></i></button><span class="grow"><b>${g.d} dias depois do vencimento</b><small style="display:block">${esc(g.txt)}</small></span></div>`).join('')}</div></div>
     <div class="card"><div class="cap">Como a família paga</div><p style="color:var(--ink-2)">O lembrete leva um link de pagamento (PIX ou cartão). Quando a família paga, a baixa entra sozinha e o recibo é enviado.</p></div>
   </aside></div>`;
 }
 A.toggleRegua=el=>{const g=DB.cfg.regua[+el.dataset.id];g.on=!g.on;render();toast('Lembrete de '+g.d+' dias '+(g.on?'ativado.':'pausado.'))};
-A.cobrarTodos=()=>{const n=lateList().length;confirmModal('Enviar lembrete a todos','Preparar um lembrete de mensalidade para <b>'+pl(n,'família','famílias')+'</b> em atraso? Nesta prévia o disparo fica salvo, mas nada é enviado.','Preparar disparo',()=>{
-  DB.disp.push({id:nid(),nome:'Lembrete de mensalidade',data:TODAY,publico:'Mensalidade em atraso',canal:'WhatsApp',env:n,ent:0,resp:0,st:'Rascunho',txt:''});toast('Disparo de cobrança salvo como rascunho. Na prévia nada é enviado.',1)})};
+A.cobrarTodos=()=>{const n=lateList().length;confirmModal('Enviar lembrete a todos','Preparar um lembrete de mensalidade para <b>'+pl(n,'família','famílias')+'</b> em atraso? '+(PREV?'Na prévia nada é enviado.':'O envio automático começa quando o WhatsApp Business for conectado.')+'','Preparar disparo',()=>{
+  DB.disp.push({id:nid(),nome:'Lembrete de mensalidade',data:TODAY,publico:'Mensalidade em atraso',canal:'WhatsApp',env:n,ent:0,resp:0,st:'Rascunho',txt:''});toast('Disparo de cobrança salvo como rascunho. '+(PREV?'Na prévia nada é enviado.':'O envio automático começa quando o WhatsApp Business for conectado.'),1)})};
 
 /* ================= Link de pagamento ================= */
 A.payLink=el=>{
   const f=FAM.get(+el.dataset.id),[t,i]=(el.dataset.arg||'don').split(':'),p=t==='pay'?DB.pay.find(x=>x.id===+i):null;
   const valor=p?p.valor:(f.mens.valor||DB.cfg.mensPadrao),desc=p?'Mensalidade de '+compTxt(p.comp):'Doação';
   S.pl={fid:f.id,pid:p?p.id:null,desc,link:'https://pagamento.exemplo/chai-menachem/'+(f.id*7919+(p?p.id:1)).toString(36)};
+  if(!PREV){openModal({title:'Registrar pagamento',body:`<div class="fgrid">
+    <div class="field half"><span class="flabel">Família</span><b>${esc(famName(f))}</b></div><div class="field half"><span class="flabel">Referente a</span><b>${esc(desc)}</b></div>
+    <div class="field half"><label for="pl-valor">Valor recebido (R$)</label><input class="inp" id="pl-valor" inputmode="decimal" value="${String(valor).replace('.',',')}"></div>
+    <div class="field"><span class="hint">O link de pagamento do Mercado Pago, com baixa automática, entra quando a integração for conectada. Por enquanto, registre aqui o que a família já pagou.</span></div></div>`,
+    footer:`<button type="button" class="btn" data-act="closeModal">Fechar</button><button type="button" class="btn btn-green" data-act="plPago">${ic('check',15)}Registrar pagamento</button>`});return}
   openModal({title:'Link de pagamento',body:`<div class="fgrid">
     <div class="field half"><span class="flabel">Família</span><b>${esc(famName(f))}</b></div><div class="field half"><span class="flabel">Referente a</span><b>${esc(desc)}</b></div>
     <div class="field half"><label for="pl-valor">Valor (R$)</label><input class="inp" id="pl-valor" inputmode="decimal" value="${String(valor).replace('.',',')}"></div><div class="field half"><span class="flabel">Formas aceitas</span><span>PIX e cartão de crédito</span></div>
@@ -57,8 +62,8 @@ A.payLink=el=>{
 };
 A.plWa=()=>{const x=S.pl,v=parseMoney($('#pl-valor').value),f=FAM.get(x.fid),r=respOf(f);closeModal();openWa(x.fid,null,{txt:`Shalom ${r?r.nome.split(' ')[0]:''}! Segue o link para pagamento de ${x.desc} (${BRL(v)}): ${x.link}`})};
 A.plPago=()=>{const x=S.pl,v=parseMoney($('#pl-valor').value),f=FAM.get(x.fid);if(!v){$('#m-err').textContent='Informe o valor.';return}
-  if(x.pid){const p=DB.pay.find(z=>z.id===x.pid);p.valor=v;p.pagoEm=TODAY;p.forma='PIX'}else addDon({fid:f.id,pid:f.respId,data:TODAY,valor:v,tipo:'Doação geral',forma:'PIX',obs:'Pagamento online'});
-  addCt({fid:f.id,tipo:'email',titulo:'Recibo enviado',det:x.desc+' · '+BRL(v),data:TODAY,feito:true});closeModal();render();toast('Pagamento de '+BRL(v)+' confirmado para '+famName(f)+'. Recibo enviado.')};
+  if(x.pid){const p=DB.pay.find(z=>z.id===x.pid);p.valor=v;p.pagoEm=TODAY;if(PREV)p.forma='PIX'}else addDon({fid:f.id,pid:f.respId,data:TODAY,valor:v,tipo:'Doação geral',forma:PREV?'PIX':(f.mens.forma||'PIX'),obs:PREV?'Pagamento online':''});
+  addCt({fid:f.id,tipo:'email',titulo:PREV?'Recibo enviado':'Pagamento registrado',det:x.desc+' · '+BRL(v),data:TODAY,feito:true});closeModal();render();toast('Pagamento de '+BRL(v)+' '+(PREV?'confirmado':'registrado')+' para '+famName(f)+'.'+(PREV?' Recibo enviado.':''))};
 
 /* ================= Recibos ================= */
 function receipts(fid,days){
@@ -83,7 +88,7 @@ const rcText=x=>{const f=FAM.get(x.fid),r=respOf(f);return ['CHAI MENACHEM','Rec
 A.recibo=el=>{const x=rcFind(+el.dataset.id,el.dataset.arg);if(!x)return;const f=FAM.get(x.fid),r=respOf(f);S.rc=x;
   openModal({title:'Recibo',body:`<div class="rcb"><div class="rcb-h"><b>CHAI MENACHEM</b><span class="num">Recibo nº ${rcNum(x)}</span></div>
     <p>Recebemos de <b>${esc(r?r.nome:famName(f))}</b> (${esc(famName(f))}) a quantia de</p><div class="big num">${BRL(x.valor)}</div>
-    ${kv([['Referente a',esc(x.ref)],['Data',fmtDate(x.data)],['Forma de pagamento',esc(x.forma)]])}</div><p class="hint" style="margin-top:10px">Recibo de exemplo, com dados fictícios da prévia.</p>`,
+    ${kv([['Referente a',esc(x.ref)],['Data',fmtDate(x.data)],['Forma de pagamento',esc(x.forma)]])}</div><p class="hint" style="margin-top:10px">${PREV?'Recibo de exemplo, com dados fictícios da prévia.':'O envio automático do recibo começa quando o WhatsApp Business for conectado.'}</p>`,
     footer:`<button type="button" class="btn" data-act="closeModal">Fechar</button><button type="button" class="btn" data-act="rcDown">${ic('download',15)}Baixar</button><button type="button" class="btn btn-green" data-act="rcWa">${ic('wa',15)}Enviar por WhatsApp</button>`})};
 A.rcDown=async()=>{const x=S.rc;if((await download('recibo-'+rcNum(x)+'.txt',rcText(x)))==='fail')toast('Não deu para baixar por aqui.',1)};
 A.rcWa=()=>{const x=S.rc;closeModal();openWa(x.fid,null,{txt:rcText(x)})};

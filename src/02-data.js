@@ -2,7 +2,7 @@
 const DB={fam:[],ppl:[],pay:[],don:[],prom:[],ev:[],yz:[],ct:[],disp:[],tpl:[],auto:[],seg:[],cfg:{}};
 const FAM=new Map(),PPL=new Map(),EV=new Map();
 const IX={ppl:new Map(),pay:new Map(),don:new Map(),prom:new Map(),ct:new Map(),yz:new Map(),reg:new Map()};
-let SEQ=1;const nid=()=>SEQ++;
+let SEQ=1,LASTID=0;const nid=()=>{if(PREV)return SEQ++;let v=(Date.now()-1.7e12)*1000+Math.floor(Math.random()*1000);if(v<=LASTID)v=LASTID+1;return LASTID=v};
 const ixAdd=(m,k,v)=>{let a=m.get(k);if(!a)m.set(k,a=[]);a.push(v);return v};
 const ixOf=(m,k)=>m.get(k)||[];
 const ixDel=(m,k,v)=>{const a=m.get(k);if(a){const i=a.indexOf(v);if(i>=0)a.splice(i,1)}};

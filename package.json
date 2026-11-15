@@ -2,7 +2,15 @@
   "name": "sistema-chai-menachem",
   "version": "0.1.0",
   "private": true,
-  "description": "Sistema de gestão da comunidade Chai Menachem (prévia com dados de exemplo)",
-  "scripts": { "start": "node server.js", "build": "sh build.sh" },
-  "engines": { "node": ">=18" }
+  "description": "Sistema de gestão da comunidade Chai Menachem (login, banco de dados e prévia em /previa)",
+  "scripts": {
+    "start": "node server.js",
+    "build": "sh build.sh"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "pg": "^8.13.1"
+  }
 }

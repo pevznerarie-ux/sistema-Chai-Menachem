@@ -25,7 +25,7 @@ const ROLE_COR={Pai:0,'Mãe':1,Filho:4,Filha:2,'Avô':5,'Avó':7,Outro:3};
 const ROLE_TONE={Pai:'blue','Mãe':'purple',Filho:'amber',Filha:'amber','Avô':'gray','Avó':'gray',Outro:'gray'};
 const pAv=(p,cls)=>av(initials(p.nome),ROLE_COR[p.papel]??3,cls);
 const catBadge=f=>badge(f.cat,CAT_TONE[f.cat]);
-const mensBadge=(f,long)=>{const s=mensStatus(f);return s==='ok'?badge(long?'Mensalidade em dia':'Em dia','green'):s==='late'?badge(long?'Mensalidade atrasada':'Atrasado','red'):badge(long?'Sem mensalidade':'Não possui','gray')};
+const mensBadge=(f,long)=>{if(!can('fin'))return '<span class="muted">—</span>';const s=mensStatus(f);return s==='ok'?badge(long?'Mensalidade em dia':'Em dia','green'):s==='late'?badge(long?'Mensalidade atrasada':'Atrasado','red'):badge(long?'Sem mensalidade':'Não possui','gray')};
 const payBadge=p=>{const s=payStatus(p);return badge(s,s==='Pago'?'green':s==='Atrasado'?'red':'amber')};
 const EV_TONE={Aberto:'green',Lotado:'amber','Em andamento':'blue','Concluído':'gray',Cancelado:'red'};
 const opt=(v,l,cur)=>`<option value="${esc(v)}" ${String(cur)===String(v)?'selected':''}>${esc(l)}</option>`;
@@ -88,11 +88,13 @@ function renderSide(){
   <nav class="nav" aria-label="Menu principal">${nav.filter(n=>!n.side).map(n=>`<button type="button" class="${sec===n.k?'on':''}" data-go="${n.r}"><span>${n.t}</span></button>`).join('')}</nav>
   <div class="gs-wrap"><label class="search">${ic('search',15)}<input id="gs-q" type="search" placeholder="Buscar família, pessoa, evento..." aria-label="Busca geral" data-on="gsearch" autocomplete="off"></label><div class="gs-res" hidden></div></div>
   <button type="button" class="tb-ic ${S.route==='contatar'?'on':''}" data-go="contatar" title="Para contatar" aria-label="Para contatar: ${nn}">${ic('bell',18)}${nn?`<i>${nn>99?'99+':nn}</i>`:''}</button>
+  ${PREV?'':syncBadge()}
   ${can('cfg')?`<button type="button" class="tb-ic ${sec==='configuracoes'?'on':''}" data-go="configuracoes" title="Configurações" aria-label="Configurações">${ic('gear',18)}</button>`:''}${meB}
   ${cur&&cur.sub?subs(cur,'subbar'):''}`
    :`<div class="brand">${ic('temple',30,1.6)}<div><b>Chai Menachem</b><span>COMUNIDADE</span></div></div>
   <nav class="nav" aria-label="Menu principal">${nav.map(n=>`<button type="button" class="${sec===n.k?'on':''}" data-go="${n.r}">${ic(n.i,17)}<span>${n.t}</span>${n.sub?`<span class="chev">${ic(sec===n.k?'down':'next',14)}</span>`:''}</button>${n.sub&&sec===n.k?subs(n,'subnav'):''}`).join('')}</nav>${meB}`;
   $('#bnav').innerHTML=[['painel','home','Painel'],['familias','users','Famílias'],['contatar','bell','Contatar'],['eventos','calendar','Eventos']].map(b=>`<button type="button" class="${S.route===b[0]?'on':''}" data-go="${b[0]}">${ic(b[1],19)}${b[2]}</button>`).join('')+`<button type="button" data-act="openNav">${ic('menu',19)}Mais</button>`;
+  if(!PREV){$('#pbar').style.display='none';const tb=$('.topbar');let sb=tb&&tb.querySelector('.tb-sync');if(tb&&!sb){sb=document.createElement('span');sb.className='tb-sync';tb.appendChild(sb)}if(sb)sb.innerHTML=syncBadge();return}
   $('#pbar').innerHTML='<span style="display:flex;gap:8px;align-items:flex-start">'+ic('info',14)+'<span><b>Prévia com dados de exemplo.</b> O que você cadastrar aqui serve para testar e não fica salvo.</span></span>';
 }
 try{window.matchMedia('(min-width:901px)').addEventListener('change',()=>renderSide())}catch(e){}
@@ -123,9 +125,10 @@ function render(){
   const r=parseRoute(S.route),fn=PAGES[r.name]||PAGES.familias,perm=SECPERM[SEC[r.name]||r.name];
   renderSide();
   let html;
-  if(perm&&!can(perm))html=lockPage('O perfil '+esc(me().papel)+' não tem acesso a esta área. Clique no seu nome, no alto da tela, para trocar de usuário.');
+  if(perm&&!can(perm))html=lockPage('O perfil '+esc(me().papel)+' não tem acesso a esta área.'+(PREV?' Clique no seu nome, no alto da tela, para trocar de usuário.':' Fale com a administração se precisar.'));
   else try{html=fn(r)}catch(e){console.error(e);html=`<div class="card">${empty('Não foi possível abrir esta tela.',esc(e.message))}</div>`}
   pg.innerHTML=html;
+  if(!PREV)scheduleSync();
   if(S.top){pg.scrollTop=0;S.top=false}
   if(aid){const n=document.getElementById(aid);if(n){n.focus();try{if(pos!=null)n.setSelectionRange(pos,pos)}catch(e){}}}
 }
@@ -184,7 +187,7 @@ function formModal(o){
 function confirmModal(title,text,label,fn){
   openModal({title,body:`<p class="intro" style="margin:0">${text}</p>`,footer:`<button type="button" class="btn" data-act="closeModal">Cancelar</button><button type="submit" class="btn btn-navy">${label}</button>`,onSubmit(){fn();closeModal();render()}});
 }
-function toast(msg,warn){if(!warn&&DB.log&&!/^(Preparando|Copiado|Arquivo|Mensagem aberta|Você está)/.test(msg))DB.log.unshift({em:nowStr(),quem:me().nome,txt:msg});const t=document.createElement('div');t.className='toast'+(warn?' warn':'');t.innerHTML=ic(warn?'info':'checkc',16)+`<span>${esc(msg)}</span>`;$('#toasts').appendChild(t);setTimeout(()=>t.remove(),warn?5200:3600)}
+function toast(msg,warn){if(!warn&&DB.log&&!/^(Preparando|Copiado|Arquivo|Mensagem aberta|Você está)/.test(msg))DB.log.unshift({id:nid(),em:nowStr(),quem:me().nome,txt:msg});if(!PREV)scheduleSync();const t=document.createElement('div');t.className='toast'+(warn?' warn':'');t.innerHTML=ic(warn?'info':'checkc',16)+`<span>${esc(msg)}</span>`;$('#toasts').appendChild(t);setTimeout(()=>t.remove(),warn?5200:3600)}
 function closeMenu(){if(S.menu){S.menu.el.remove();S.menu=null}}
 function openMenu(anchor,items){
   if(S.menu&&S.menu.anchor===anchor){closeMenu();return}

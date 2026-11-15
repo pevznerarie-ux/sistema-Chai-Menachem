@@ -1,6 +1,6 @@
 /* ================= criação de família (formulário e importação) ================= */
 function createFam(o){
-  const f=addFam({nome:String(o.nome||'').trim().replace(/^fam[ií]lia\s+/i,''),cat:CATS.includes(o.cat)?o.cat:'Visitante',status:'Ativo',fav:false,cor:SEQ%8,cad:TODAY,origem:o.origem||'',soube:o.soube||'',tel:String(o.tel||'').trim(),fixo:'',email:String(o.email||'').trim(),
+  const f=addFam({nome:String(o.nome||'').trim().replace(/^fam[ií]lia\s+/i,''),cat:CATS.includes(o.cat)?o.cat:'Visitante',status:'Ativo',fav:false,cor:Math.floor(Math.random()*8),cad:TODAY,origem:o.origem||'',soube:o.soube||'',tel:String(o.tel||'').trim(),fixo:'',email:String(o.email||'').trim(),
     end:{rua:'',comp:'',bairro:o.bairro||'',cid:'São Paulo',uf:'SP',cep:''},part:{shabat:false,eventos:false,aulas:false,kidush:false,kids:false,teens:false},mens:{ativa:false,valor:0,dia:DB.cfg.diaPadrao,forma:'PIX'},
     trib:'Israel',idioma:'Português',okWa:o.okWa!==false,okMail:o.okMail!==false,obs:'',pres:null,tags:[],ev12:0,notaRabino:'',sc0:0},true);
   const p=addPerson({fid:f.id,nome:String(o.resp||o.nome).trim(),heb:'',papel:'Pai',sexo:'M',nasc:'',civil:'',nac:'Brasileira',prof:'',emp:'',tel:f.tel,fixo:'',email:f.email,obs:'',ativo:true,grupos:[]});
@@ -15,7 +15,7 @@ function comForms(){
 }
 A.formPreview=el=>{
   const f=DB.forms.find(x=>x.id===+el.dataset.id);
-  if(f.k!=='cadastro'){openModal({title:f.nome,body:`<p class="intro">${esc(f.desc)}</p><p class="hint">Na versão online este formulário tem um link próprio, para enviar às famílias ou colocar no site.</p>`,footer:`<button type="button" class="btn btn-navy" data-act="closeModal">Fechar</button>`});return}
+  if(f.k!=='cadastro'){openModal({title:f.nome,body:`<p class="intro">${esc(f.desc)}</p><p class="hint">${PREV?'Na versão online este formulário tem um link próprio, para enviar às famílias ou colocar no site.':'O link público, para enviar às famílias ou colocar no site, ainda vai ser ativado.'}</p>`,footer:`<button type="button" class="btn btn-navy" data-act="closeModal">Fechar</button>`});return}
   formModal({title:'Cadastro de nova família',wide:true,intro:'É assim que a família vê o formulário. Ao enviar, a ficha é criada e a equipe recebe o alerta de boas-vindas.',submit:'Enviar cadastro',fields:[
     {k:'nome',label:'Sobrenome da família',req:true,half:true},{k:'resp',label:'Seu nome completo',req:true,half:true},
     {k:'tel',label:'WhatsApp',type:'tel',req:true,ph:'11 99999-9999',half:true},{k:'email',label:'E-mail',type:'email',ph:'exemplo@email.com',half:true},
@@ -26,10 +26,12 @@ A.formPreview=el=>{
 
 /* ================= Área da família ================= */
 function pgPortal(r){
-  const f=FAM.get(r.id)||DB.fam.find(x=>x.fav)||DB.fam[0],rp=respOf(f),ms=mensStatus(f),np=nextPay(f.id),id=f.id;
+  const f=FAM.get(r.id)||DB.fam.find(x=>x.fav)||DB.fam[0];
+  if(!f)return head('Área da família','O que a família vai ver quando tiver o próprio acesso.')+`<div class="card">${empty('Nenhuma família cadastrada ainda.','Cadastre a primeira família para ver a área dela.')}</div>`;
+  const rp=respOf(f),ms=mensStatus(f),np=nextPay(f.id),id=f.id;
   const evs=DB.ev.filter(e=>!e.cancel&&e.data>=TODAY).sort(by(e=>e.data)).slice(0,4),rc=receipts(id,400).slice(0,4),yz=ixOf(IX.yz,id).filter(y=>yzNext(y)).sort(by(yzNext));
   buildFamLabels();
-  return head('Área da família','O que cada família vê ao entrar com o próprio acesso. Escolha uma família para visualizar.',`<input class="inp" id="pt-fam" list="dl-fam" placeholder="Trocar de família..." aria-label="Família" data-on="portalPick" autocomplete="off" style="width:260px">`)+
+  return head('Área da família','O que a família vai ver quando tiver o próprio acesso. Escolha uma família para visualizar.',`<input class="inp" id="pt-fam" list="dl-fam" placeholder="Trocar de família..." aria-label="Família" data-on="portalPick" autocomplete="off" style="width:260px">`)+
   `<datalist id="dl-fam">${DB.fam.map(x=>`<option value="${esc(x._lab)}"></option>`).join('')}</datalist>
   <div class="portal"><div class="portal-hero">${famAv(f,'av-lg')}<div style="flex:1;min-width:200px"><h2>Shalom, ${esc(rp?rp.nome.split(' ')[0]:'')}!</h2><p>Esta é a área da ${esc(famName(f))} no Chai Menachem.</p></div></div>
   <div class="g2 mt">
@@ -62,14 +64,14 @@ function pgConfig2(){
         <div class="ct" style="margin:16px 0 12px">Formas de pagamento</div><div class="chips" style="margin:0">${FORMAS.map(x=>badge(x,'gray')).join('')}</div></div></div>`;
   }else if(u.tab==='users'){
     body=`<div class="g2"><div class="card pad0"><div class="toolbar" style="padding-bottom:12px;justify-content:space-between"><div class="ct">Usuários</div>${btn('Novo usuário','plus','btn-green btn-sm','data-act="novoUser"')}</div>
-        <div class="tw"><table class="tbl" style="min-width:360px"><thead><tr><th>Nome</th><th>E-mail</th><th>Perfil</th></tr></thead><tbody>${DB.users.map(x=>`<tr><td><div class="who">${av(x.nome[0].toUpperCase(),x.id,'av-sm')}<b>${esc(x.nome)}</b></div></td><td>${esc(x.email||'')}</td><td>${badge(x.papel,x.papel==='Administrador'?'blue':x.papel==='Rabino'?'purple':x.papel==='Voluntário'?'gray':'green')}</td></tr>`).join('')}</tbody></table></div>
-        <p class="hint" style="padding:10px 16px;border-top:1px solid var(--line-2)">Para testar os perfis, clique no seu nome, no alto da tela, e escolha outro usuário. O login com senha entra na versão online.</p></div>
+        <div class="tw"><table class="tbl" style="min-width:360px"><thead><tr><th>Nome</th><th>E-mail</th><th>Perfil</th>${PREV?'':'<th class="right">Ações</th>'}</tr></thead><tbody>${DB.users.map(x=>`<tr><td><div class="who">${av(x.nome[0].toUpperCase(),x.id,'av-sm')}<b>${esc(x.nome)}</b></div></td><td>${esc(x.email||'')}</td><td>${badge(x.papel,x.papel==='Administrador'?'blue':x.papel==='Rabino'?'purple':x.papel==='Voluntário'?'gray':'green')}</td>${PREV?'':`<td class="acts">${x.ativo===false?badge('Desativado','gray')+' ':''}${userActs(x)}</td>`}</tr>`).join('')}</tbody></table></div>
+        <p class="hint" style="padding:10px 16px;border-top:1px solid var(--line-2)">${PREV?'Para testar os perfis, clique no seu nome, no alto da tela, e escolha outro usuário. O login com senha entra na versão online.':'Cada pessoa entra com o próprio e-mail e senha. Ao desativar um acesso, a pessoa sai do sistema na hora.'}</p></div>
       <div class="card pad0"><div class="toolbar" style="padding-bottom:12px"><div class="ct">O que cada perfil pode ver</div></div><div class="tw"><table class="tbl mx" style="min-width:420px"><thead><tr><th>Área</th>${roles.map(r=>`<th>${r}</th>`).join('')}</tr></thead><tbody>${PERM_ROWS.map(p=>`<tr><td>${p[0]}</td>${roles.map(r=>`<td>${!p[1]||ROLES[r][p[1]]?`<span style="color:var(--green-ink)" title="Tem acesso">${ic('check',15)}</span>`:'<span class="muted" title="Sem acesso">—</span>'}</td>`).join('')}</tr>`).join('')}</tbody></table></div></div></div>`;
   }else if(u.tab==='integr'){
     body=`<div class="g3">${INTEGR.map(x=>`<div class="card camp"><div class="ch" style="margin:0"><div class="ct">${ic(x[2],16)}${x[1]}</div>${badge(c.integr[x[0]]?'Conectado':'A conectar',c.integr[x[0]]?'green':'amber')}</div><p style="color:var(--ink-2);flex:1">${x[3]}</p><div class="pacts">${btn('Como conectar','plug','btn-sm',`data-act="integr" data-arg="${x[0]}"`)}</div></div>`).join('')}</div>
-      <p class="hint mt">As integrações são ligadas quando o sistema estiver online. Na prévia, os pagamentos e os envios são simulados.</p>`;
+      <p class="hint mt">${PREV?'As integrações são ligadas quando o sistema estiver online. Na prévia, os pagamentos e os envios são simulados.':'As integrações são ligadas uma a uma, com as contas da comunidade. Até lá, pagamentos e mensagens são registrados à mão.'}</p>`;
   }else if(u.tab==='dados'){
-    body=`<div class="g2"><div class="card"><div class="ct" style="margin-bottom:8px">${ic('cloud',16)}Backup</div><p style="color:var(--ink-2)">Na versão online, o sistema guarda uma cópia de todos os dados todos os dias, de madrugada, e mantém as cópias dos últimos 30 dias.</p><p class="hint" style="margin:8px 0 12px">A prévia não faz backup automático, porque os dados são de exemplo. O botão abaixo já funciona.</p>${btn('Baixar cópia dos dados agora','download','btn-green','data-act="backup"')}</div>
+    body=`<div class="g2"><div class="card"><div class="ct" style="margin-bottom:8px">${ic('cloud',16)}Backup</div><p style="color:var(--ink-2)">${PREV?`Na versão online, o sistema guarda uma cópia de todos os dados todos os dias, de madrugada, e mantém as cópias dos últimos 30 dias.</p><p class="hint" style="margin:8px 0 12px">A prévia não faz backup automático, porque os dados são de exemplo. O botão abaixo já funciona.</p>`:`Os dados ficam guardados no banco de dados do sistema. Baixe uma cópia completa de vez em quando, por segurança: recomendo uma vez por semana.</p><p class="hint" style="margin:8px 0 12px">A cópia é um arquivo com todas as famílias, pessoas, pagamentos, eventos e anotações.</p>`}${btn('Baixar cópia dos dados agora','download','btn-green','data-act="backup"')}</div>
       <div class="card"><div class="ct" style="margin-bottom:8px">${ic('upload',16)}Importar planilha</div><p style="color:var(--ink-2)">Traga as famílias que já estão no Excel. O sistema reconhece as colunas e confere duplicados pelo telefone antes de gravar.</p><div class="pacts" style="margin-top:12px">${btn('Importar planilha','upload','btn-green','data-act="importar"')}${btn('Baixar modelo','download','','data-act="impModelo"')}</div></div></div>`;
   }else if(u.tab==='lgpd'){
     const act=DB.fam.filter(f=>f.status==='Ativo'),noWa=act.filter(f=>f.okWa===false),noMail=act.filter(f=>f.okMail===false);
@@ -86,7 +88,7 @@ function pgConfig2(){
 }
 A.novoUser=()=>formModal({title:'Novo usuário',submit:'Criar usuário',fields:[{k:'nome',label:'Nome',req:true,half:true},{k:'email',label:'E-mail',type:'email',req:true,ph:'exemplo@email.com',half:true},{k:'papel',label:'Perfil',type:'select',opts:Object.keys(ROLES),val:'Secretária'}],
   onSubmit(v){DB.users.push({id:Math.max(...DB.users.map(u=>u.id))+1,nome:v.nome,email:v.email,papel:v.papel});toast('Usuário '+v.nome+' criado com o perfil '+v.papel+'.')}});
-A.integr=el=>{const x=INTEGR.find(i=>i[0]===el.dataset.arg);openModal({title:x[1],body:`<p class="intro">${x[3]}</p>${kv([['O que é preciso',x[4]],['Situação','A conectar, quando o sistema estiver online']])}`,footer:`<button type="button" class="btn btn-navy" data-act="closeModal">Entendi</button>`})};
+A.integr=el=>{const x=INTEGR.find(i=>i[0]===el.dataset.arg);openModal({title:x[1],body:`<p class="intro">${x[3]}</p>${kv([['O que é preciso',x[4]],['Situação','A conectar']])}`,footer:`<button type="button" class="btn btn-navy" data-act="closeModal">Entendi</button>`})};
 A.backup=async()=>{const data=JSON.stringify({geradoEm:nowStr(),familias:DB.fam,pessoas:DB.ppl,mensalidades:DB.pay,doacoes:DB.don,promessas:DB.prom,eventos:DB.ev,yahrzeits:DB.yz,contatos:DB.ct,momentos:DB.life,campanhas:DB.camp,aulas:DB.aulas},(k,v)=>k[0]==='_'?undefined:v);
   if((await download('backup-chai-menachem-'+TODAY+'.json',data))==='fail')toast('Não deu para baixar por aqui.',1)};
 async function lgpdExport(f){const data=JSON.stringify({exportadoEm:nowStr(),familia:f,pessoas:members(f.id),mensalidades:ixOf(IX.pay,f.id),doacoes:ixOf(IX.don,f.id),promessas:ixOf(IX.prom,f.id),yahrzeits:ixOf(IX.yz,f.id),contatos:ixOf(IX.ct,f.id),momentos:DB.life.filter(l=>l.fid===f.id)},(k,v)=>k[0]==='_'||k==='notaRabino'?undefined:v,1);
@@ -169,5 +171,5 @@ function resumoTxt(){
     'Eventos da semana: '+(evs.length?evs.map(e=>e.nome+' em '+fmtDM(e.data)+' ('+evInsc(e)+' inscritos)').join('; ')+'.':'nenhum.'),
     '','Para contatar primeiro:'].concat(top.map((n,i)=>(i+1)+'. '+famName(n.f)+': '+NEED[n.k][0]+'. '+n.txt)).join('\n');
 }
-A.resumoSemana=()=>{const t=resumoTxt();openModal({title:'Resumo da semana',wide:true,body:`<p class="intro">É este o texto que o rabino recebe todo domingo às 20h, quando a automatização está ativa.</p><textarea class="inp" id="copy-txt" rows="14" readonly>${esc(t)}</textarea>`,
+A.resumoSemana=()=>{const t=resumoTxt();openModal({title:'Resumo da semana',wide:true,body:`<p class="intro">Resumo pronto para enviar ao rabino.</p><textarea class="inp" id="copy-txt" rows="14" readonly>${esc(t)}</textarea>`,
   footer:`<button type="button" class="btn" data-act="closeModal">Fechar</button><button type="button" class="btn" data-act="copyTxt">${ic('copy',15)}Copiar</button><a class="btn btn-green" target="_blank" rel="noopener" href="${esc(waHref('',t))}">${ic('wa',15)}Enviar por WhatsApp</a>`})};

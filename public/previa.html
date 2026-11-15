@@ -440,6 +440,21 @@ button.me{border:0;font:inherit;text-align:left;cursor:pointer}
 .app.topnav .side{column-gap:12px}
 .app.topnav .brand{margin-right:8px}
 
+.auth{min-height:100%;display:flex;align-items:center;justify-content:center;padding:24px 16px;background:var(--bg)}
+.auth-card{width:100%;max-width:400px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:28px;display:flex;flex-direction:column}
+.auth-brand{display:flex;align-items:center;gap:10px;color:var(--brand-ic);margin-bottom:22px}
+.auth-brand b{color:var(--ink);font-size:17px}
+.auth h1{font-size:20px;font-weight:700;margin-bottom:4px}
+.auth .sub{color:var(--ink-2);margin-bottom:18px}
+.auth .field{margin-bottom:12px}
+.auth .btn{width:100%;height:38px;margin-top:6px}
+.auth .err{min-height:0;margin:2px 0}
+.sync{font-size:11.5px;color:var(--ink-3);white-space:nowrap;display:inline-flex;align-items:center;gap:5px;flex:none}
+.sync svg{color:var(--green)}
+.sync.err,.sync.err svg{color:var(--red-ink)}
+.tb-sync{margin-left:auto}
+.tb-sync .sync{color:inherit;opacity:.8}
+
 /* ---------- responsive ---------- */
 @media (max-width:1180px){
   .split,.split-w,.split-l{grid-template-columns:minmax(0,1fr)}
@@ -493,10 +508,12 @@ button.me{border:0;font:inherit;text-align:left;cursor:pointer}
     <nav class="bnav" id="bnav" aria-label="Atalhos"></nav>
   </div>
 </div>
+<div id="auth" style="display:none;height:100%"></div>
 <div id="modal-root"></div>
 <div id="toasts" aria-live="polite"></div>
 <div class="tip" id="tip"></div>
 <script>
+const PREV=true;
 'use strict';
 /* ================= helpers ================= */
 const $=(s,el=document)=>el.querySelector(s);
@@ -613,7 +630,7 @@ const ic=(n,s=16,sw=1.8)=>`<svg class="ic" width="${s}" height="${s}" viewBox="0
 const DB={fam:[],ppl:[],pay:[],don:[],prom:[],ev:[],yz:[],ct:[],disp:[],tpl:[],auto:[],seg:[],cfg:{}};
 const FAM=new Map(),PPL=new Map(),EV=new Map();
 const IX={ppl:new Map(),pay:new Map(),don:new Map(),prom:new Map(),ct:new Map(),yz:new Map(),reg:new Map()};
-let SEQ=1;const nid=()=>SEQ++;
+let SEQ=1,LASTID=0;const nid=()=>{if(PREV)return SEQ++;let v=(Date.now()-1.7e12)*1000+Math.floor(Math.random()*1000);if(v<=LASTID)v=LASTID+1;return LASTID=v};
 const ixAdd=(m,k,v)=>{let a=m.get(k);if(!a)m.set(k,a=[]);a.push(v);return v};
 const ixOf=(m,k)=>m.get(k)||[];
 const ixDel=(m,k,v)=>{const a=m.get(k);if(a){const i=a.indexOf(v);if(i>=0)a.splice(i,1)}};
@@ -882,7 +899,7 @@ const ROLE_COR={Pai:0,'Mãe':1,Filho:4,Filha:2,'Avô':5,'Avó':7,Outro:3};
 const ROLE_TONE={Pai:'blue','Mãe':'purple',Filho:'amber',Filha:'amber','Avô':'gray','Avó':'gray',Outro:'gray'};
 const pAv=(p,cls)=>av(initials(p.nome),ROLE_COR[p.papel]??3,cls);
 const catBadge=f=>badge(f.cat,CAT_TONE[f.cat]);
-const mensBadge=(f,long)=>{const s=mensStatus(f);return s==='ok'?badge(long?'Mensalidade em dia':'Em dia','green'):s==='late'?badge(long?'Mensalidade atrasada':'Atrasado','red'):badge(long?'Sem mensalidade':'Não possui','gray')};
+const mensBadge=(f,long)=>{if(!can('fin'))return '<span class="muted">—</span>';const s=mensStatus(f);return s==='ok'?badge(long?'Mensalidade em dia':'Em dia','green'):s==='late'?badge(long?'Mensalidade atrasada':'Atrasado','red'):badge(long?'Sem mensalidade':'Não possui','gray')};
 const payBadge=p=>{const s=payStatus(p);return badge(s,s==='Pago'?'green':s==='Atrasado'?'red':'amber')};
 const EV_TONE={Aberto:'green',Lotado:'amber','Em andamento':'blue','Concluído':'gray',Cancelado:'red'};
 const opt=(v,l,cur)=>`<option value="${esc(v)}" ${String(cur)===String(v)?'selected':''}>${esc(l)}</option>`;
@@ -945,11 +962,13 @@ function renderSide(){
   <nav class="nav" aria-label="Menu principal">${nav.filter(n=>!n.side).map(n=>`<button type="button" class="${sec===n.k?'on':''}" data-go="${n.r}"><span>${n.t}</span></button>`).join('')}</nav>
   <div class="gs-wrap"><label class="search">${ic('search',15)}<input id="gs-q" type="search" placeholder="Buscar família, pessoa, evento..." aria-label="Busca geral" data-on="gsearch" autocomplete="off"></label><div class="gs-res" hidden></div></div>
   <button type="button" class="tb-ic ${S.route==='contatar'?'on':''}" data-go="contatar" title="Para contatar" aria-label="Para contatar: ${nn}">${ic('bell',18)}${nn?`<i>${nn>99?'99+':nn}</i>`:''}</button>
+  ${PREV?'':syncBadge()}
   ${can('cfg')?`<button type="button" class="tb-ic ${sec==='configuracoes'?'on':''}" data-go="configuracoes" title="Configurações" aria-label="Configurações">${ic('gear',18)}</button>`:''}${meB}
   ${cur&&cur.sub?subs(cur,'subbar'):''}`
    :`<div class="brand">${ic('temple',30,1.6)}<div><b>Chai Menachem</b><span>COMUNIDADE</span></div></div>
   <nav class="nav" aria-label="Menu principal">${nav.map(n=>`<button type="button" class="${sec===n.k?'on':''}" data-go="${n.r}">${ic(n.i,17)}<span>${n.t}</span>${n.sub?`<span class="chev">${ic(sec===n.k?'down':'next',14)}</span>`:''}</button>${n.sub&&sec===n.k?subs(n,'subnav'):''}`).join('')}</nav>${meB}`;
   $('#bnav').innerHTML=[['painel','home','Painel'],['familias','users','Famílias'],['contatar','bell','Contatar'],['eventos','calendar','Eventos']].map(b=>`<button type="button" class="${S.route===b[0]?'on':''}" data-go="${b[0]}">${ic(b[1],19)}${b[2]}</button>`).join('')+`<button type="button" data-act="openNav">${ic('menu',19)}Mais</button>`;
+  if(!PREV){$('#pbar').style.display='none';const tb=$('.topbar');let sb=tb&&tb.querySelector('.tb-sync');if(tb&&!sb){sb=document.createElement('span');sb.className='tb-sync';tb.appendChild(sb)}if(sb)sb.innerHTML=syncBadge();return}
   $('#pbar').innerHTML='<span style="display:flex;gap:8px;align-items:flex-start">'+ic('info',14)+'<span><b>Prévia com dados de exemplo.</b> O que você cadastrar aqui serve para testar e não fica salvo.</span></span>';
 }
 try{window.matchMedia('(min-width:901px)').addEventListener('change',()=>renderSide())}catch(e){}
@@ -980,9 +999,10 @@ function render(){
   const r=parseRoute(S.route),fn=PAGES[r.name]||PAGES.familias,perm=SECPERM[SEC[r.name]||r.name];
   renderSide();
   let html;
-  if(perm&&!can(perm))html=lockPage('O perfil '+esc(me().papel)+' não tem acesso a esta área. Clique no seu nome, no alto da tela, para trocar de usuário.');
+  if(perm&&!can(perm))html=lockPage('O perfil '+esc(me().papel)+' não tem acesso a esta área.'+(PREV?' Clique no seu nome, no alto da tela, para trocar de usuário.':' Fale com a administração se precisar.'));
   else try{html=fn(r)}catch(e){console.error(e);html=`<div class="card">${empty('Não foi possível abrir esta tela.',esc(e.message))}</div>`}
   pg.innerHTML=html;
+  if(!PREV)scheduleSync();
   if(S.top){pg.scrollTop=0;S.top=false}
   if(aid){const n=document.getElementById(aid);if(n){n.focus();try{if(pos!=null)n.setSelectionRange(pos,pos)}catch(e){}}}
 }
@@ -1041,7 +1061,7 @@ function formModal(o){
 function confirmModal(title,text,label,fn){
   openModal({title,body:`<p class="intro" style="margin:0">${text}</p>`,footer:`<button type="button" class="btn" data-act="closeModal">Cancelar</button><button type="submit" class="btn btn-navy">${label}</button>`,onSubmit(){fn();closeModal();render()}});
 }
-function toast(msg,warn){if(!warn&&DB.log&&!/^(Preparando|Copiado|Arquivo|Mensagem aberta|Você está)/.test(msg))DB.log.unshift({em:nowStr(),quem:me().nome,txt:msg});const t=document.createElement('div');t.className='toast'+(warn?' warn':'');t.innerHTML=ic(warn?'info':'checkc',16)+`<span>${esc(msg)}</span>`;$('#toasts').appendChild(t);setTimeout(()=>t.remove(),warn?5200:3600)}
+function toast(msg,warn){if(!warn&&DB.log&&!/^(Preparando|Copiado|Arquivo|Mensagem aberta|Você está)/.test(msg))DB.log.unshift({id:nid(),em:nowStr(),quem:me().nome,txt:msg});if(!PREV)scheduleSync();const t=document.createElement('div');t.className='toast'+(warn?' warn':'');t.innerHTML=ic(warn?'info':'checkc',16)+`<span>${esc(msg)}</span>`;$('#toasts').appendChild(t);setTimeout(()=>t.remove(),warn?5200:3600)}
 function closeMenu(){if(S.menu){S.menu.el.remove();S.menu=null}}
 function openMenu(anchor,items){
   if(S.menu&&S.menu.anchor===anchor){closeMenu();return}
@@ -1390,7 +1410,7 @@ A.saveFam=()=>{
     if(mens&&!had)firstPay(f);
     toast('Família atualizada.');
   }else{
-    f=addFam(Object.assign({tags:[],ev12:0,notaRabino:'',sc0:0,fav:false,cor:SEQ%8,mens:{ativa:mens,valor:mens?valor:0,dia:+d.mensDia||10,forma:d.mensForma||'PIX'},pres:null},base),true);
+    f=addFam(Object.assign({tags:[],ev12:0,notaRabino:'',sc0:0,fav:false,cor:Math.floor(Math.random()*8),mens:{ativa:mens,valor:mens?valor:0,dia:+d.mensDia||10,forma:d.mensForma||'PIX'},pres:null},base),true);
     f.respId=mk(f.id,d.rNome,d.rPar,{tel:f.tel,fixo:f.fixo,email:f.email}).id;
     d.membros.filter(m=>m.nome.trim()).forEach(m=>mk(f.id,m.nome,m.papel,{nasc:m.nasc,tel:m.tel.trim()}));
     if(kidsOf(f.id).length)f.part.kids=true;if(teensOf(f.id).length)f.part.teens=true;
@@ -1753,14 +1773,14 @@ function pgCom(){
   }else if(u.tab==='forms'){
     body=comForms();
   }else{
-    body=`<div class="card"><div class="ct" style="margin-bottom:4px">Automatizações</div><p class="hint" style="margin-bottom:8px">Mensagens que o sistema prepara sozinho. Nesta prévia elas ficam só configuradas: nada é enviado.</p><div class="rows">${DB.auto.map(a=>`<div class="rw"><button type="button" class="switch ${a.on?'on':''}" role="switch" aria-checked="${!!a.on}" aria-label="${esc(a.nome)}" data-act="toggleAuto" data-id="${a.id}"><i></i></button><span class="grow"><b>${esc(a.nome)}</b><small style="display:block">${esc(a.quando)} · modelo “${esc(a.modelo)}”</small></span>${badge(a.on?'Ativa':'Pausada',a.on?'green':'gray')}</div>`).join('')}</div></div>`;
+    body=`<div class="card"><div class="ct" style="margin-bottom:4px">Automatizações</div><p class="hint" style="margin-bottom:8px">Mensagens que o sistema prepara sozinho. ${PREV?'Nesta prévia elas ficam só configuradas: nada é enviado.':'Elas começam a funcionar quando o WhatsApp Business for conectado. Por enquanto, nada é enviado sozinho.'}</p><div class="rows">${DB.auto.map(a=>`<div class="rw"><button type="button" class="switch ${a.on?'on':''}" role="switch" aria-checked="${!!a.on}" aria-label="${esc(a.nome)}" data-act="toggleAuto" data-id="${a.id}"><i></i></button><span class="grow"><b>${esc(a.nome)}</b><small style="display:block">${esc(a.quando)} · modelo “${esc(a.modelo)}”</small></span>${badge(a.on?'Ativa':'Pausada',a.on?'green':'gray')}</div>`).join('')}</div></div>`;
   }
   return head('Comunicação','Envie mensagens para contatos, grupos ou segmentos',btn('Novo disparo','plus','btn-blue','data-act="novoDisparo"'))+
     tabsU('com.tab',u.tab,[['disparos','Disparos'],['mensagens','Mensagens'],['segmentos','Listas / Segmentos'],['modelos','Modelos'],['auto','Automatizações'],['forms','Formulários']]).replace('class="utabs"','class="utabs" style="margin-top:0"')+body;
 }
 A.novoDisparo=el=>{
   const segs=allSegs(),t0=el.dataset.tpl?DB.tpl.find(t=>t.id===+el.dataset.tpl):null;
-  formModal({title:'Novo disparo',wide:true,submit:'Salvar disparo',intro:'Nesta prévia o disparo fica salvo na lista, mas nenhuma mensagem é enviada.',fields:[
+  formModal({title:'Novo disparo',wide:true,submit:'Salvar disparo',intro:PREV?'Nesta prévia o disparo fica salvo na lista, mas nenhuma mensagem é enviada.':'O disparo fica salvo na lista. O envio automático começa quando o WhatsApp Business for conectado.',fields:[
     {k:'nome',label:'Nome do disparo',req:true,ph:'Ex.: Convite Chanucá',half:true},{k:'canal',label:'Canal',type:'select',opts:['WhatsApp','E-mail'],val:t0?t0.canal:'WhatsApp',half:true},
     {k:'publico',label:'Público',type:'select',opts:segs.map(s=>[s.nome,s.nome+' — '+NUM(segCount(s))+' contatos']),val:el.dataset.arg||'Comunidade',half:true},
     {k:'tpl',label:'Modelo',type:'select',ph:'Escrever do zero',opts:DB.tpl.map(t=>[t.id,t.nome]),val:t0?t0.id:'',on:'dispTpl',half:true},
@@ -1770,7 +1790,7 @@ A.novoDisparo=el=>{
     onSubmit(v){const s=segs.find(x=>x.nome===v.publico),ag=v.quando==='agendar';
       if(ag&&(!v.data||v.data<TODAY))return 'Escolha uma data de hoje em diante.';
       DB.disp.push({id:nid(),nome:v.nome,data:ag?v.data:TODAY,publico:v.publico,canal:v.canal,env:s?segCount(s):0,ent:0,resp:0,st:ag?'Agendado':'Rascunho',txt:v.txt});
-      S.ui.com.tab='disparos';toast(ag?'Disparo agendado para '+fmtDate(v.data)+'. Na prévia nada é enviado.':'Disparo salvo como rascunho. Na prévia nada é enviado.',1)}});
+      S.ui.com.tab='disparos';toast(ag?'Disparo agendado para '+fmtDate(v.data)+'. '+(PREV?'Na prévia nada é enviado.':'O envio automático começa quando o WhatsApp Business for conectado.'):'Disparo salvo como rascunho. '+(PREV?'Na prévia nada é enviado.':'O envio automático começa quando o WhatsApp Business for conectado.'),1)}});
 };
 A.dispTpl=el=>{const t=DB.tpl.find(x=>x.id===+el.value),ta=$('#ff-txt');if(ta)ta.value=t?t.txt:''};
 A.waPick=()=>formModal({title:'Enviar WhatsApp',submit:'Continuar',fields:[{k:'fid',label:'Para qual família?',type:'family',req:true}],onSubmit(v){setTimeout(()=>openWa(v.fid),0)}});
@@ -1780,7 +1800,7 @@ A.novoSeg=()=>formModal({title:'Novo segmento',submit:'Criar segmento',fields:[
   {k:'mens',label:'Mensalidade',type:'select',ph:'Qualquer situação',opts:[['ok','Em dia'],['late','Atrasada'],['none','Não possui']],half:true}],
   onSubmit(v){if(allSegs().some(s=>norm(s.nome)===norm(v.nome)))return 'Já existe um segmento com este nome.';
     const crit=[v.cat&&'Categoria '+v.cat,v.part&&(PART.find(p=>p[0]===v.part)||[])[1],v.mens&&'Mensalidade '+({ok:'em dia',late:'atrasada',none:'não possui'})[v.mens]].filter(Boolean).join(' · ')||'Todas as famílias ativas';
-    DB.seg.push({nome:v.nome,crit,fn:f=>f.status==='Ativo'&&(!v.cat||f.cat===v.cat)&&(!v.part||f.part[v.part])&&(!v.mens||mensStatus(f)===v.mens)});S.ui.com.tab='segmentos';toast('Segmento criado.')}});
+    DB.seg.push({id:nid(),nome:v.nome,crit,cat:v.cat,part:v.part,mens:v.mens,fn:f=>f.status==='Ativo'&&(!v.cat||f.cat===v.cat)&&(!v.part||f.part[v.part])&&(!v.mens||mensStatus(f)===v.mens)});S.ui.com.tab='segmentos';toast('Segmento criado.')}});
 function tplForm(t){formModal({title:t?'Editar modelo':'Novo modelo',wide:true,submit:t?'Salvar':'Criar modelo',fields:[
   {k:'nome',label:'Nome do modelo',req:true,val:t&&t.nome,half:true},{k:'canal',label:'Canal',type:'select',opts:['WhatsApp','E-mail'],val:t?t.canal:'WhatsApp',half:true},
   {k:'txt',label:'Texto',type:'textarea',rows:6,req:true,val:t&&t.txt,hint:'Campos automáticos: {nome}, {evento}, {data}, {valor}, {competencia}, {falecido}, {data_hebraica}.'}],
@@ -1950,7 +1970,7 @@ const lastCt=fid=>{let m='';ixOf(IX.ct,fid).forEach(c=>{if(c.feito&&c.tipo!=='pr
 function score(f){
   let s=0;const dp=f.pres?diffDays(TODAY,f.pres.data):999;
   s+=dp<=7?40:dp<=14?32:dp<=30?22:dp<=60?10:0;
-  s+=Math.min(20,(f.ev12||0)*3+ixOf(IX.reg,f.id).filter(e=>!e.cancel&&e.data>=TODAY).length*4);
+  s+=Math.min(20,(f._ev12??f.ev12??0)*3+ixOf(IX.reg,f.id).filter(e=>!e.cancel&&e.data>=TODAY).length*4);
   const ms=mensStatus(f);s+=ms==='ok'?15:ms==='late'?5:0;
   if(ixOf(IX.don,f.id).some(d=>d.data>=addDays(TODAY,-365)))s+=10;
   const lc=lastCt(f.id),dc=lc?diffDays(TODAY,lc):999;s+=dc<=30?15:dc<=90?8:0;
@@ -2114,7 +2134,7 @@ A.rmTag=el=>{const f=FAM.get(+el.dataset.id);arrDel(f.tags,el.dataset.arg);f._s=
 const tagChips=f=>`<div class="chips">${(f.tags||[]).map(t=>`<button type="button" class="badge b-gray tagx" title="Remover etiqueta" data-act="rmTag" data-id="${f.id}" data-arg="${esc(t)}">${ic('tag',11)}${esc(t)} ×</button>`).join('')}<button type="button" class="badge b-gray tagx" data-act="addTag" data-id="${f.id}">+ etiqueta</button></div>`;
 const rabCard=f=>can('notas')
   ?`<div class="card mt"><div class="ct" style="margin-bottom:10px">${ic('lock',16)}Anotações privadas do rabino</div><textarea class="inp" id="obs-rab" rows="5" placeholder="Só o rabino vê estas anotações...">${esc(f.notaRabino||'')}</textarea><div class="pacts" style="margin-top:10px">${btn('Salvar anotação','check','btn-green',`data-act="saveRab" data-id="${f.id}"`)}</div></div>`
-  :`<div class="card mt"><div class="ct" style="margin-bottom:6px">${ic('lock',16)}Anotações privadas do rabino</div><p class="hint">Só o rabino vê estas anotações. Para testar, clique no seu nome, no alto da tela, e entre como Rabino.</p></div>`;
+  :`<div class="card mt"><div class="ct" style="margin-bottom:6px">${ic('lock',16)}Anotações privadas do rabino</div><p class="hint">Só o rabino vê estas anotações.${PREV?' Para testar, clique no seu nome, no alto da tela, e entre como Rabino.':''}</p></div>`;
 A.saveRab=el=>{FAM.get(+el.dataset.id).notaRabino=$('#obs-rab').value.trim();toast('Anotação do rabino salva.');render()};
 
 /* ================= dados de exemplo dos novos módulos ================= */
@@ -2204,19 +2224,24 @@ function pgCobranca(){
       <td class="num">${x.n}</td><td class="num"><b style="color:var(--red-ink)">${BRL(x.v)}</b></td><td class="num">${fmtDate(x.ps[0].venc)} <small>(${ago(x.ps[0].venc)})</small></td>
       <td class="acts"><button type="button" class="ibtn" title="Enviar lembrete" aria-label="Enviar lembrete" data-act="waLate" data-id="${x.f.id}">${ic('wa',15)}</button><button type="button" class="ibtn" title="Link de pagamento" aria-label="Link de pagamento" data-act="payLink" data-id="${x.f.id}" data-arg="pay:${x.ps[0].id}">${ic('link',15)}</button><button type="button" class="ibtn" title="Abrir financeiro" aria-label="Abrir financeiro" data-go="financeiro-${x.f.id}">${ic('eye',15)}</button></td></tr>`).join('')}</tbody></table></div>`:empty('Nenhuma mensalidade em atraso.','Todas as famílias estão em dia.')}
   </div><aside class="rail">
-    <div class="card"><div class="cap">Régua de cobrança</div><p class="hint" style="margin-bottom:6px">O sistema lembra a família sozinho, nestes momentos.</p><div class="rows">${DB.cfg.regua.map((g,i)=>`<div class="rw"><button type="button" class="switch ${g.on?'on':''}" role="switch" aria-checked="${!!g.on}" aria-label="${esc(g.txt)}" data-act="toggleRegua" data-id="${i}"><i></i></button><span class="grow"><b>${g.d} dias depois do vencimento</b><small style="display:block">${esc(g.txt)}</small></span></div>`).join('')}</div></div>
+    <div class="card"><div class="cap">Régua de cobrança</div><p class="hint" style="margin-bottom:6px">${PREV?'O sistema lembra a família sozinho, nestes momentos.':'Os lembretes automáticos começam quando o WhatsApp Business for conectado.'}</p><div class="rows">${DB.cfg.regua.map((g,i)=>`<div class="rw"><button type="button" class="switch ${g.on?'on':''}" role="switch" aria-checked="${!!g.on}" aria-label="${esc(g.txt)}" data-act="toggleRegua" data-id="${i}"><i></i></button><span class="grow"><b>${g.d} dias depois do vencimento</b><small style="display:block">${esc(g.txt)}</small></span></div>`).join('')}</div></div>
     <div class="card"><div class="cap">Como a família paga</div><p style="color:var(--ink-2)">O lembrete leva um link de pagamento (PIX ou cartão). Quando a família paga, a baixa entra sozinha e o recibo é enviado.</p></div>
   </aside></div>`;
 }
 A.toggleRegua=el=>{const g=DB.cfg.regua[+el.dataset.id];g.on=!g.on;render();toast('Lembrete de '+g.d+' dias '+(g.on?'ativado.':'pausado.'))};
-A.cobrarTodos=()=>{const n=lateList().length;confirmModal('Enviar lembrete a todos','Preparar um lembrete de mensalidade para <b>'+pl(n,'família','famílias')+'</b> em atraso? Nesta prévia o disparo fica salvo, mas nada é enviado.','Preparar disparo',()=>{
-  DB.disp.push({id:nid(),nome:'Lembrete de mensalidade',data:TODAY,publico:'Mensalidade em atraso',canal:'WhatsApp',env:n,ent:0,resp:0,st:'Rascunho',txt:''});toast('Disparo de cobrança salvo como rascunho. Na prévia nada é enviado.',1)})};
+A.cobrarTodos=()=>{const n=lateList().length;confirmModal('Enviar lembrete a todos','Preparar um lembrete de mensalidade para <b>'+pl(n,'família','famílias')+'</b> em atraso? '+(PREV?'Na prévia nada é enviado.':'O envio automático começa quando o WhatsApp Business for conectado.')+'','Preparar disparo',()=>{
+  DB.disp.push({id:nid(),nome:'Lembrete de mensalidade',data:TODAY,publico:'Mensalidade em atraso',canal:'WhatsApp',env:n,ent:0,resp:0,st:'Rascunho',txt:''});toast('Disparo de cobrança salvo como rascunho. '+(PREV?'Na prévia nada é enviado.':'O envio automático começa quando o WhatsApp Business for conectado.'),1)})};
 
 /* ================= Link de pagamento ================= */
 A.payLink=el=>{
   const f=FAM.get(+el.dataset.id),[t,i]=(el.dataset.arg||'don').split(':'),p=t==='pay'?DB.pay.find(x=>x.id===+i):null;
   const valor=p?p.valor:(f.mens.valor||DB.cfg.mensPadrao),desc=p?'Mensalidade de '+compTxt(p.comp):'Doação';
   S.pl={fid:f.id,pid:p?p.id:null,desc,link:'https://pagamento.exemplo/chai-menachem/'+(f.id*7919+(p?p.id:1)).toString(36)};
+  if(!PREV){openModal({title:'Registrar pagamento',body:`<div class="fgrid">
+    <div class="field half"><span class="flabel">Família</span><b>${esc(famName(f))}</b></div><div class="field half"><span class="flabel">Referente a</span><b>${esc(desc)}</b></div>
+    <div class="field half"><label for="pl-valor">Valor recebido (R$)</label><input class="inp" id="pl-valor" inputmode="decimal" value="${String(valor).replace('.',',')}"></div>
+    <div class="field"><span class="hint">O link de pagamento do Mercado Pago, com baixa automática, entra quando a integração for conectada. Por enquanto, registre aqui o que a família já pagou.</span></div></div>`,
+    footer:`<button type="button" class="btn" data-act="closeModal">Fechar</button><button type="button" class="btn btn-green" data-act="plPago">${ic('check',15)}Registrar pagamento</button>`});return}
   openModal({title:'Link de pagamento',body:`<div class="fgrid">
     <div class="field half"><span class="flabel">Família</span><b>${esc(famName(f))}</b></div><div class="field half"><span class="flabel">Referente a</span><b>${esc(desc)}</b></div>
     <div class="field half"><label for="pl-valor">Valor (R$)</label><input class="inp" id="pl-valor" inputmode="decimal" value="${String(valor).replace('.',',')}"></div><div class="field half"><span class="flabel">Formas aceitas</span><span>PIX e cartão de crédito</span></div>
@@ -2225,8 +2250,8 @@ A.payLink=el=>{
 };
 A.plWa=()=>{const x=S.pl,v=parseMoney($('#pl-valor').value),f=FAM.get(x.fid),r=respOf(f);closeModal();openWa(x.fid,null,{txt:`Shalom ${r?r.nome.split(' ')[0]:''}! Segue o link para pagamento de ${x.desc} (${BRL(v)}): ${x.link}`})};
 A.plPago=()=>{const x=S.pl,v=parseMoney($('#pl-valor').value),f=FAM.get(x.fid);if(!v){$('#m-err').textContent='Informe o valor.';return}
-  if(x.pid){const p=DB.pay.find(z=>z.id===x.pid);p.valor=v;p.pagoEm=TODAY;p.forma='PIX'}else addDon({fid:f.id,pid:f.respId,data:TODAY,valor:v,tipo:'Doação geral',forma:'PIX',obs:'Pagamento online'});
-  addCt({fid:f.id,tipo:'email',titulo:'Recibo enviado',det:x.desc+' · '+BRL(v),data:TODAY,feito:true});closeModal();render();toast('Pagamento de '+BRL(v)+' confirmado para '+famName(f)+'. Recibo enviado.')};
+  if(x.pid){const p=DB.pay.find(z=>z.id===x.pid);p.valor=v;p.pagoEm=TODAY;if(PREV)p.forma='PIX'}else addDon({fid:f.id,pid:f.respId,data:TODAY,valor:v,tipo:'Doação geral',forma:PREV?'PIX':(f.mens.forma||'PIX'),obs:PREV?'Pagamento online':''});
+  addCt({fid:f.id,tipo:'email',titulo:PREV?'Recibo enviado':'Pagamento registrado',det:x.desc+' · '+BRL(v),data:TODAY,feito:true});closeModal();render();toast('Pagamento de '+BRL(v)+' '+(PREV?'confirmado':'registrado')+' para '+famName(f)+'.'+(PREV?' Recibo enviado.':''))};
 
 /* ================= Recibos ================= */
 function receipts(fid,days){
@@ -2251,7 +2276,7 @@ const rcText=x=>{const f=FAM.get(x.fid),r=respOf(f);return ['CHAI MENACHEM','Rec
 A.recibo=el=>{const x=rcFind(+el.dataset.id,el.dataset.arg);if(!x)return;const f=FAM.get(x.fid),r=respOf(f);S.rc=x;
   openModal({title:'Recibo',body:`<div class="rcb"><div class="rcb-h"><b>CHAI MENACHEM</b><span class="num">Recibo nº ${rcNum(x)}</span></div>
     <p>Recebemos de <b>${esc(r?r.nome:famName(f))}</b> (${esc(famName(f))}) a quantia de</p><div class="big num">${BRL(x.valor)}</div>
-    ${kv([['Referente a',esc(x.ref)],['Data',fmtDate(x.data)],['Forma de pagamento',esc(x.forma)]])}</div><p class="hint" style="margin-top:10px">Recibo de exemplo, com dados fictícios da prévia.</p>`,
+    ${kv([['Referente a',esc(x.ref)],['Data',fmtDate(x.data)],['Forma de pagamento',esc(x.forma)]])}</div><p class="hint" style="margin-top:10px">${PREV?'Recibo de exemplo, com dados fictícios da prévia.':'O envio automático do recibo começa quando o WhatsApp Business for conectado.'}</p>`,
     footer:`<button type="button" class="btn" data-act="closeModal">Fechar</button><button type="button" class="btn" data-act="rcDown">${ic('download',15)}Baixar</button><button type="button" class="btn btn-green" data-act="rcWa">${ic('wa',15)}Enviar por WhatsApp</button>`})};
 A.rcDown=async()=>{const x=S.rc;if((await download('recibo-'+rcNum(x)+'.txt',rcText(x)))==='fail')toast('Não deu para baixar por aqui.',1)};
 A.rcWa=()=>{const x=S.rc;closeModal();openWa(x.fid,null,{txt:rcText(x)})};
@@ -2387,7 +2412,7 @@ A.exportKids=el=>{const isK=el.dataset.arg==='criancas',rows=[['Nome','Família'
 A.exportYz=()=>{const rows=[['Falecido','Dia','Mês hebraico','Próxima data','Relacionamento','Família','Telefone']];yzFiltered().forEach(y=>{const f=FAM.get(y.fid);rows.push([y.nome,y.d,y.m,yzNext(y)?fmtDate(yzNext(y)):'',y.rel,famName(f),f.tel])});saveFile('yahrzeits.csv',rows)};
 /* ================= criação de família (formulário e importação) ================= */
 function createFam(o){
-  const f=addFam({nome:String(o.nome||'').trim().replace(/^fam[ií]lia\s+/i,''),cat:CATS.includes(o.cat)?o.cat:'Visitante',status:'Ativo',fav:false,cor:SEQ%8,cad:TODAY,origem:o.origem||'',soube:o.soube||'',tel:String(o.tel||'').trim(),fixo:'',email:String(o.email||'').trim(),
+  const f=addFam({nome:String(o.nome||'').trim().replace(/^fam[ií]lia\s+/i,''),cat:CATS.includes(o.cat)?o.cat:'Visitante',status:'Ativo',fav:false,cor:Math.floor(Math.random()*8),cad:TODAY,origem:o.origem||'',soube:o.soube||'',tel:String(o.tel||'').trim(),fixo:'',email:String(o.email||'').trim(),
     end:{rua:'',comp:'',bairro:o.bairro||'',cid:'São Paulo',uf:'SP',cep:''},part:{shabat:false,eventos:false,aulas:false,kidush:false,kids:false,teens:false},mens:{ativa:false,valor:0,dia:DB.cfg.diaPadrao,forma:'PIX'},
     trib:'Israel',idioma:'Português',okWa:o.okWa!==false,okMail:o.okMail!==false,obs:'',pres:null,tags:[],ev12:0,notaRabino:'',sc0:0},true);
   const p=addPerson({fid:f.id,nome:String(o.resp||o.nome).trim(),heb:'',papel:'Pai',sexo:'M',nasc:'',civil:'',nac:'Brasileira',prof:'',emp:'',tel:f.tel,fixo:'',email:f.email,obs:'',ativo:true,grupos:[]});
@@ -2402,7 +2427,7 @@ function comForms(){
 }
 A.formPreview=el=>{
   const f=DB.forms.find(x=>x.id===+el.dataset.id);
-  if(f.k!=='cadastro'){openModal({title:f.nome,body:`<p class="intro">${esc(f.desc)}</p><p class="hint">Na versão online este formulário tem um link próprio, para enviar às famílias ou colocar no site.</p>`,footer:`<button type="button" class="btn btn-navy" data-act="closeModal">Fechar</button>`});return}
+  if(f.k!=='cadastro'){openModal({title:f.nome,body:`<p class="intro">${esc(f.desc)}</p><p class="hint">${PREV?'Na versão online este formulário tem um link próprio, para enviar às famílias ou colocar no site.':'O link público, para enviar às famílias ou colocar no site, ainda vai ser ativado.'}</p>`,footer:`<button type="button" class="btn btn-navy" data-act="closeModal">Fechar</button>`});return}
   formModal({title:'Cadastro de nova família',wide:true,intro:'É assim que a família vê o formulário. Ao enviar, a ficha é criada e a equipe recebe o alerta de boas-vindas.',submit:'Enviar cadastro',fields:[
     {k:'nome',label:'Sobrenome da família',req:true,half:true},{k:'resp',label:'Seu nome completo',req:true,half:true},
     {k:'tel',label:'WhatsApp',type:'tel',req:true,ph:'11 99999-9999',half:true},{k:'email',label:'E-mail',type:'email',ph:'exemplo@email.com',half:true},
@@ -2413,10 +2438,12 @@ A.formPreview=el=>{
 
 /* ================= Área da família ================= */
 function pgPortal(r){
-  const f=FAM.get(r.id)||DB.fam.find(x=>x.fav)||DB.fam[0],rp=respOf(f),ms=mensStatus(f),np=nextPay(f.id),id=f.id;
+  const f=FAM.get(r.id)||DB.fam.find(x=>x.fav)||DB.fam[0];
+  if(!f)return head('Área da família','O que a família vai ver quando tiver o próprio acesso.')+`<div class="card">${empty('Nenhuma família cadastrada ainda.','Cadastre a primeira família para ver a área dela.')}</div>`;
+  const rp=respOf(f),ms=mensStatus(f),np=nextPay(f.id),id=f.id;
   const evs=DB.ev.filter(e=>!e.cancel&&e.data>=TODAY).sort(by(e=>e.data)).slice(0,4),rc=receipts(id,400).slice(0,4),yz=ixOf(IX.yz,id).filter(y=>yzNext(y)).sort(by(yzNext));
   buildFamLabels();
-  return head('Área da família','O que cada família vê ao entrar com o próprio acesso. Escolha uma família para visualizar.',`<input class="inp" id="pt-fam" list="dl-fam" placeholder="Trocar de família..." aria-label="Família" data-on="portalPick" autocomplete="off" style="width:260px">`)+
+  return head('Área da família','O que a família vai ver quando tiver o próprio acesso. Escolha uma família para visualizar.',`<input class="inp" id="pt-fam" list="dl-fam" placeholder="Trocar de família..." aria-label="Família" data-on="portalPick" autocomplete="off" style="width:260px">`)+
   `<datalist id="dl-fam">${DB.fam.map(x=>`<option value="${esc(x._lab)}"></option>`).join('')}</datalist>
   <div class="portal"><div class="portal-hero">${famAv(f,'av-lg')}<div style="flex:1;min-width:200px"><h2>Shalom, ${esc(rp?rp.nome.split(' ')[0]:'')}!</h2><p>Esta é a área da ${esc(famName(f))} no Chai Menachem.</p></div></div>
   <div class="g2 mt">
@@ -2449,14 +2476,14 @@ function pgConfig2(){
         <div class="ct" style="margin:16px 0 12px">Formas de pagamento</div><div class="chips" style="margin:0">${FORMAS.map(x=>badge(x,'gray')).join('')}</div></div></div>`;
   }else if(u.tab==='users'){
     body=`<div class="g2"><div class="card pad0"><div class="toolbar" style="padding-bottom:12px;justify-content:space-between"><div class="ct">Usuários</div>${btn('Novo usuário','plus','btn-green btn-sm','data-act="novoUser"')}</div>
-        <div class="tw"><table class="tbl" style="min-width:360px"><thead><tr><th>Nome</th><th>E-mail</th><th>Perfil</th></tr></thead><tbody>${DB.users.map(x=>`<tr><td><div class="who">${av(x.nome[0].toUpperCase(),x.id,'av-sm')}<b>${esc(x.nome)}</b></div></td><td>${esc(x.email||'')}</td><td>${badge(x.papel,x.papel==='Administrador'?'blue':x.papel==='Rabino'?'purple':x.papel==='Voluntário'?'gray':'green')}</td></tr>`).join('')}</tbody></table></div>
-        <p class="hint" style="padding:10px 16px;border-top:1px solid var(--line-2)">Para testar os perfis, clique no seu nome, no alto da tela, e escolha outro usuário. O login com senha entra na versão online.</p></div>
+        <div class="tw"><table class="tbl" style="min-width:360px"><thead><tr><th>Nome</th><th>E-mail</th><th>Perfil</th>${PREV?'':'<th class="right">Ações</th>'}</tr></thead><tbody>${DB.users.map(x=>`<tr><td><div class="who">${av(x.nome[0].toUpperCase(),x.id,'av-sm')}<b>${esc(x.nome)}</b></div></td><td>${esc(x.email||'')}</td><td>${badge(x.papel,x.papel==='Administrador'?'blue':x.papel==='Rabino'?'purple':x.papel==='Voluntário'?'gray':'green')}</td>${PREV?'':`<td class="acts">${x.ativo===false?badge('Desativado','gray')+' ':''}${userActs(x)}</td>`}</tr>`).join('')}</tbody></table></div>
+        <p class="hint" style="padding:10px 16px;border-top:1px solid var(--line-2)">${PREV?'Para testar os perfis, clique no seu nome, no alto da tela, e escolha outro usuário. O login com senha entra na versão online.':'Cada pessoa entra com o próprio e-mail e senha. Ao desativar um acesso, a pessoa sai do sistema na hora.'}</p></div>
       <div class="card pad0"><div class="toolbar" style="padding-bottom:12px"><div class="ct">O que cada perfil pode ver</div></div><div class="tw"><table class="tbl mx" style="min-width:420px"><thead><tr><th>Área</th>${roles.map(r=>`<th>${r}</th>`).join('')}</tr></thead><tbody>${PERM_ROWS.map(p=>`<tr><td>${p[0]}</td>${roles.map(r=>`<td>${!p[1]||ROLES[r][p[1]]?`<span style="color:var(--green-ink)" title="Tem acesso">${ic('check',15)}</span>`:'<span class="muted" title="Sem acesso">—</span>'}</td>`).join('')}</tr>`).join('')}</tbody></table></div></div></div>`;
   }else if(u.tab==='integr'){
     body=`<div class="g3">${INTEGR.map(x=>`<div class="card camp"><div class="ch" style="margin:0"><div class="ct">${ic(x[2],16)}${x[1]}</div>${badge(c.integr[x[0]]?'Conectado':'A conectar',c.integr[x[0]]?'green':'amber')}</div><p style="color:var(--ink-2);flex:1">${x[3]}</p><div class="pacts">${btn('Como conectar','plug','btn-sm',`data-act="integr" data-arg="${x[0]}"`)}</div></div>`).join('')}</div>
-      <p class="hint mt">As integrações são ligadas quando o sistema estiver online. Na prévia, os pagamentos e os envios são simulados.</p>`;
+      <p class="hint mt">${PREV?'As integrações são ligadas quando o sistema estiver online. Na prévia, os pagamentos e os envios são simulados.':'As integrações são ligadas uma a uma, com as contas da comunidade. Até lá, pagamentos e mensagens são registrados à mão.'}</p>`;
   }else if(u.tab==='dados'){
-    body=`<div class="g2"><div class="card"><div class="ct" style="margin-bottom:8px">${ic('cloud',16)}Backup</div><p style="color:var(--ink-2)">Na versão online, o sistema guarda uma cópia de todos os dados todos os dias, de madrugada, e mantém as cópias dos últimos 30 dias.</p><p class="hint" style="margin:8px 0 12px">A prévia não faz backup automático, porque os dados são de exemplo. O botão abaixo já funciona.</p>${btn('Baixar cópia dos dados agora','download','btn-green','data-act="backup"')}</div>
+    body=`<div class="g2"><div class="card"><div class="ct" style="margin-bottom:8px">${ic('cloud',16)}Backup</div><p style="color:var(--ink-2)">${PREV?`Na versão online, o sistema guarda uma cópia de todos os dados todos os dias, de madrugada, e mantém as cópias dos últimos 30 dias.</p><p class="hint" style="margin:8px 0 12px">A prévia não faz backup automático, porque os dados são de exemplo. O botão abaixo já funciona.</p>`:`Os dados ficam guardados no banco de dados do sistema. Baixe uma cópia completa de vez em quando, por segurança: recomendo uma vez por semana.</p><p class="hint" style="margin:8px 0 12px">A cópia é um arquivo com todas as famílias, pessoas, pagamentos, eventos e anotações.</p>`}${btn('Baixar cópia dos dados agora','download','btn-green','data-act="backup"')}</div>
       <div class="card"><div class="ct" style="margin-bottom:8px">${ic('upload',16)}Importar planilha</div><p style="color:var(--ink-2)">Traga as famílias que já estão no Excel. O sistema reconhece as colunas e confere duplicados pelo telefone antes de gravar.</p><div class="pacts" style="margin-top:12px">${btn('Importar planilha','upload','btn-green','data-act="importar"')}${btn('Baixar modelo','download','','data-act="impModelo"')}</div></div></div>`;
   }else if(u.tab==='lgpd'){
     const act=DB.fam.filter(f=>f.status==='Ativo'),noWa=act.filter(f=>f.okWa===false),noMail=act.filter(f=>f.okMail===false);
@@ -2473,7 +2500,7 @@ function pgConfig2(){
 }
 A.novoUser=()=>formModal({title:'Novo usuário',submit:'Criar usuário',fields:[{k:'nome',label:'Nome',req:true,half:true},{k:'email',label:'E-mail',type:'email',req:true,ph:'exemplo@email.com',half:true},{k:'papel',label:'Perfil',type:'select',opts:Object.keys(ROLES),val:'Secretária'}],
   onSubmit(v){DB.users.push({id:Math.max(...DB.users.map(u=>u.id))+1,nome:v.nome,email:v.email,papel:v.papel});toast('Usuário '+v.nome+' criado com o perfil '+v.papel+'.')}});
-A.integr=el=>{const x=INTEGR.find(i=>i[0]===el.dataset.arg);openModal({title:x[1],body:`<p class="intro">${x[3]}</p>${kv([['O que é preciso',x[4]],['Situação','A conectar, quando o sistema estiver online']])}`,footer:`<button type="button" class="btn btn-navy" data-act="closeModal">Entendi</button>`})};
+A.integr=el=>{const x=INTEGR.find(i=>i[0]===el.dataset.arg);openModal({title:x[1],body:`<p class="intro">${x[3]}</p>${kv([['O que é preciso',x[4]],['Situação','A conectar']])}`,footer:`<button type="button" class="btn btn-navy" data-act="closeModal">Entendi</button>`})};
 A.backup=async()=>{const data=JSON.stringify({geradoEm:nowStr(),familias:DB.fam,pessoas:DB.ppl,mensalidades:DB.pay,doacoes:DB.don,promessas:DB.prom,eventos:DB.ev,yahrzeits:DB.yz,contatos:DB.ct,momentos:DB.life,campanhas:DB.camp,aulas:DB.aulas},(k,v)=>k[0]==='_'?undefined:v);
   if((await download('backup-chai-menachem-'+TODAY+'.json',data))==='fail')toast('Não deu para baixar por aqui.',1)};
 async function lgpdExport(f){const data=JSON.stringify({exportadoEm:nowStr(),familia:f,pessoas:members(f.id),mensalidades:ixOf(IX.pay,f.id),doacoes:ixOf(IX.don,f.id),promessas:ixOf(IX.prom,f.id),yahrzeits:ixOf(IX.yz,f.id),contatos:ixOf(IX.ct,f.id),momentos:DB.life.filter(l=>l.fid===f.id)},(k,v)=>k[0]==='_'||k==='notaRabino'?undefined:v,1);
@@ -2556,7 +2583,7 @@ function resumoTxt(){
     'Eventos da semana: '+(evs.length?evs.map(e=>e.nome+' em '+fmtDM(e.data)+' ('+evInsc(e)+' inscritos)').join('; ')+'.':'nenhum.'),
     '','Para contatar primeiro:'].concat(top.map((n,i)=>(i+1)+'. '+famName(n.f)+': '+NEED[n.k][0]+'. '+n.txt)).join('\n');
 }
-A.resumoSemana=()=>{const t=resumoTxt();openModal({title:'Resumo da semana',wide:true,body:`<p class="intro">É este o texto que o rabino recebe todo domingo às 20h, quando a automatização está ativa.</p><textarea class="inp" id="copy-txt" rows="14" readonly>${esc(t)}</textarea>`,
+A.resumoSemana=()=>{const t=resumoTxt();openModal({title:'Resumo da semana',wide:true,body:`<p class="intro">Resumo pronto para enviar ao rabino.</p><textarea class="inp" id="copy-txt" rows="14" readonly>${esc(t)}</textarea>`,
   footer:`<button type="button" class="btn" data-act="closeModal">Fechar</button><button type="button" class="btn" data-act="copyTxt">${ic('copy',15)}Copiar</button><a class="btn btn-green" target="_blank" rel="noopener" href="${esc(waHref('',t))}">${ic('wa',15)}Enviar por WhatsApp</a>`})};
 /* ================= início ================= */
 const PAGES={painel:pgPainel,familias:pgFamilias,'nova-familia':pgFamForm,'editar-familia':pgFamForm,familia:pgFamilia,pessoa:pgPessoa,pessoas:()=>pgPessoas('pessoas'),criancas:()=>pgKids('criancas'),teens:()=>pgKids('teens'),'bar-mitzva':pgBarMitzva,aniversariantes:pgAniv,yahrzeits:pgYahrzeits,

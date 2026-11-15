@@ -266,7 +266,7 @@ A.saveFam=()=>{
     if(mens&&!had)firstPay(f);
     toast('Família atualizada.');
   }else{
-    f=addFam(Object.assign({tags:[],ev12:0,notaRabino:'',sc0:0,fav:false,cor:SEQ%8,mens:{ativa:mens,valor:mens?valor:0,dia:+d.mensDia||10,forma:d.mensForma||'PIX'},pres:null},base),true);
+    f=addFam(Object.assign({tags:[],ev12:0,notaRabino:'',sc0:0,fav:false,cor:Math.floor(Math.random()*8),mens:{ativa:mens,valor:mens?valor:0,dia:+d.mensDia||10,forma:d.mensForma||'PIX'},pres:null},base),true);
     f.respId=mk(f.id,d.rNome,d.rPar,{tel:f.tel,fixo:f.fixo,email:f.email}).id;
     d.membros.filter(m=>m.nome.trim()).forEach(m=>mk(f.id,m.nome,m.papel,{nasc:m.nasc,tel:m.tel.trim()}));
     if(kidsOf(f.id).length)f.part.kids=true;if(teensOf(f.id).length)f.part.teens=true;
