@@ -79,7 +79,7 @@ const SEC={painel:'painel',familias:'cadastro','nova-familia':'cadastro','editar
  eventos:'eventos',evento:'eventos',aulas:'eventos',presencas:'eventos',calendario:'eventos',comunicacao:'comunicacao',portal:'portal',relatorios:'relatorios',configuracoes:'configuracoes'};
 const SUB={'nova-familia':'familias','editar-familia':'familias',familia:'familias',pessoa:'pessoas',evento:'eventos'};
 function renderSide(){
-  const r=parseRoute(S.route),sec=SEC[r.name]||r.name,sub=SUB[r.name]||r.name,top=window.matchMedia('(min-width:901px)').matches,u=me(),nav=NAV.filter(n=>!n.perm||can(n.perm)),cur=nav.find(n=>n.k===sec),nn=allNeeds().length;
+  const r=parseRoute(S.route),sec=SEC[r.name]||r.name,sub=SUB[r.name]||r.name,top=curSkin()==='moderno'&&window.matchMedia('(min-width:901px)').matches,u=me(),nav=NAV.filter(n=>!n.perm||can(n.perm)),cur=nav.find(n=>n.k===sec),nn=allNeeds().length;
   $('#app').classList.toggle('topnav',top);
   const meB=`<button type="button" class="me" data-menu="1" data-act="userMenu" title="Trocar de usuário" aria-label="Usuário ${esc(u.nome)}, ${esc(u.papel)}. Trocar de usuário"><span class="av" aria-hidden="true">${esc(u.nome[0].toUpperCase())}</span><div><b>${esc(u.nome.split(' ')[0])}</b><small>${esc(u.papel)}</small></div></button>`;
   const subs=(n,cls)=>`<div class="${cls}">${n.sub.map(s=>`<button type="button" class="${sub===s[0]?'on':''}" data-go="${s[0]}">${s[1]}</button>`).join('')}</div>`;
@@ -91,13 +91,21 @@ function renderSide(){
   ${PREV?'':syncBadge()}
   ${can('cfg')?`<button type="button" class="tb-ic ${sec==='configuracoes'?'on':''}" data-go="configuracoes" title="Configurações" aria-label="Configurações">${ic('gear',18)}</button>`:''}${meB}
   ${cur&&cur.sub?subs(cur,'subbar'):''}`
-   :`<div class="brand">${ic('temple',30,1.6)}<div><b>Chai Menachem</b><span>COMUNIDADE</span></div></div>
+   :`<div class="brand">${ic('temple',curSkin()?30:34,1.6)}<div><b>${curSkin()?'Chai Menachem':'CHAI'}</b><span>${curSkin()?'COMUNIDADE':'MENACHEM'}</span></div></div>
   <nav class="nav" aria-label="Menu principal">${nav.map(n=>`<button type="button" class="${sec===n.k?'on':''}" data-go="${n.r}">${ic(n.i,17)}<span>${n.t}</span>${n.sub?`<span class="chev">${ic(sec===n.k?'down':'next',14)}</span>`:''}</button>${n.sub&&sec===n.k?subs(n,'subnav'):''}`).join('')}</nav>${meB}`;
   $('#bnav').innerHTML=[['painel','home','Painel'],['familias','users','Famílias'],['contatar','bell','Contatar'],['eventos','calendar','Eventos']].map(b=>`<button type="button" class="${S.route===b[0]?'on':''}" data-go="${b[0]}">${ic(b[1],19)}${b[2]}</button>`).join('')+`<button type="button" data-act="openNav">${ic('menu',19)}Mais</button>`;
+  const gb=$('.gbar');let gs=gb&&gb.querySelector('.tb-sync');if(gb&&!gs&&!PREV){gs=document.createElement('span');gs.className='tb-sync';gb.appendChild(gs)}if(gs)gs.innerHTML=top?'':syncBadge();
   if(!PREV){$('#pbar').style.display='none';const tb=$('.topbar');let sb=tb&&tb.querySelector('.tb-sync');if(tb&&!sb){sb=document.createElement('span');sb.className='tb-sync';tb.appendChild(sb)}if(sb)sb.innerHTML=syncBadge();return}
-  $('#pbar').innerHTML='<span style="display:flex;gap:8px;align-items:flex-start">'+ic('info',14)+'<span><b>Prévia com dados de exemplo.</b> O que você cadastrar aqui serve para testar e não fica salvo.</span></span>';
+  $('#pbar').innerHTML='<span style="display:flex;gap:8px;align-items:flex-start">'+ic('info',14)+'<span><b>Prévia com dados de exemplo.</b> O que você cadastrar aqui serve para testar e não fica salvo.</span></span>'+skinPicker();
 }
 try{window.matchMedia('(min-width:901px)').addEventListener('change',()=>renderSide())}catch(e){}
+const SKINS=[['classico','Clássico'],['elegante','Elegante'],['moderno','Moderno']];
+const curSkin=()=>document.documentElement.dataset.skin||'';
+const skinKey=()=>curSkin()||'classico';
+function setSkin(k){if(k==='classico')delete document.documentElement.dataset.skin;else document.documentElement.dataset.skin=k;try{localStorage.setItem('cm-estilo',k)}catch(e){}}
+function skinPicker(){const c=skinKey();return `<div class="styles" role="group" aria-label="Estilo visual"><span>Estilo</span>${SKINS.map(s=>`<button type="button" class="${c===s[0]?'on':''}" data-act="skin" data-arg="${s[0]}" aria-pressed="${c===s[0]}">${s[1]}</button>`).join('')}</div>`}
+A.skin=el=>{setSkin(el.dataset.arg);render();toast('Estilo '+SKINS.find(s=>s[0]===el.dataset.arg)[1]+' aplicado.')};
+if(PREV)try{const k=localStorage.getItem('cm-estilo');if(SKINS.some(s=>s[0]===k))setSkin(k)}catch(e){}
 
 /* ================= rotas ================= */
 function parseRoute(r){const m=/^(.+)-(\d+)$/.exec(r||'');return m?{name:m[1],id:+m[2]}:{name:r}}
@@ -187,7 +195,7 @@ function formModal(o){
 function confirmModal(title,text,label,fn){
   openModal({title,body:`<p class="intro" style="margin:0">${text}</p>`,footer:`<button type="button" class="btn" data-act="closeModal">Cancelar</button><button type="submit" class="btn btn-navy">${label}</button>`,onSubmit(){fn();closeModal();render()}});
 }
-function toast(msg,warn){if(!warn&&DB.log&&!/^(Preparando|Copiado|Arquivo|Mensagem aberta|Você está)/.test(msg))DB.log.unshift({id:nid(),em:nowStr(),quem:me().nome,txt:msg});if(!PREV)scheduleSync();const t=document.createElement('div');t.className='toast'+(warn?' warn':'');t.innerHTML=ic(warn?'info':'checkc',16)+`<span>${esc(msg)}</span>`;$('#toasts').appendChild(t);setTimeout(()=>t.remove(),warn?5200:3600)}
+function toast(msg,warn){if(!warn&&DB.log&&!/^(Preparando|Copiado|Arquivo|Mensagem aberta|Você está|Estilo)/.test(msg))DB.log.unshift({id:nid(),em:nowStr(),quem:me().nome,txt:msg});if(!PREV)scheduleSync();const t=document.createElement('div');t.className='toast'+(warn?' warn':'');t.innerHTML=ic(warn?'info':'checkc',16)+`<span>${esc(msg)}</span>`;$('#toasts').appendChild(t);setTimeout(()=>t.remove(),warn?5200:3600)}
 function closeMenu(){if(S.menu){S.menu.el.remove();S.menu=null}}
 function openMenu(anchor,items){
   if(S.menu&&S.menu.anchor===anchor){closeMenu();return}
